@@ -1,0 +1,114 @@
+# Inkling Labs standard release workflow for Xcode macOS apps.
+# Trigger: Matt pushes a v* tag on main. See dev-standards/STANDARDS.md.
+# Replace Rivlet with the app/scheme name (project-init does this).
+#
+# Required repo secrets (canonical names, no exceptions):
+#   APPLE_TEAM_ID, MACOS_CERTIFICATE, MACOS_CERTIFICATE_PWD,
+#   ASC_API_KEY, ASC_API_KEY_ID, ASC_API_ISSUER_ID
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Apps that generate their Xcode project with XcodeGen gitignore the
+      # .xcodeproj, so the runner has to build it from project.yml first.
+      # Skipped for apps that commit their .xcodeproj.
+      - name: Generate Xcode project
+        if: hashFiles('project.yml') != ''
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PLIST=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Rivlet/Info.plist)
+          if [ "$PLIST" != "$VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Info.plist version $PLIST" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Import signing certificate
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+        run: |
+          KEYCHAIN_PWD=$(uuidgen)
+          KEYCHAIN=$RUNNER_TEMP/build.keychain-db
+          echo "$MACOS_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+          security import $RUNNER_TEMP/certificate.p12 -P "$MACOS_CERTIFICATE_PWD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PWD" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain
+          rm $RUNNER_TEMP/certificate.p12
+
+      - name: Build and sign
+        run: |
+          xcodebuild -project Rivlet.xcodeproj \
+            -scheme Rivlet \
+            -configuration Release \
+            -derivedDataPath build \
+            build \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
+            OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
+          codesign --verify --deep --strict --verbose=2 \
+            build/Build/Products/Release/Rivlet.app
+
+      - name: Package DMG
+        run: |
+          STAGING=$(mktemp -d)
+          cp -R build/Build/Products/Release/Rivlet.app "$STAGING/"
+          ln -s /Applications "$STAGING/Applications"
+          hdiutil create \
+            -volname "Rivlet ${{ steps.version.outputs.version }}" \
+            -srcfolder "$STAGING" \
+            -fs HFS+ \
+            -format UDZO \
+            "Rivlet-${{ steps.version.outputs.version }}.dmg"
+
+      - name: Notarize and staple
+        env:
+          ASC_API_KEY: ${{ secrets.ASC_API_KEY }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
+        run: |
+          echo "$ASC_API_KEY" | base64 --decode > $RUNNER_TEMP/AuthKey.p8
+          xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" \
+            --key $RUNNER_TEMP/AuthKey.p8 \
+            --key-id "$ASC_API_KEY_ID" \
+            --issuer "$ASC_API_ISSUER_ID" \
+            --wait
+          xcrun stapler staple "Rivlet-${{ steps.version.outputs.version }}.dmg"
+          xcrun stapler validate "Rivlet-${{ steps.version.outputs.version }}.dmg"
+          rm $RUNNER_TEMP/AuthKey.p8
+
+      - name: Create GitHub release
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "Rivlet-${{ steps.version.outputs.version }}.dmg" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Rivlet ${{ steps.version.outputs.version }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
