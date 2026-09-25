@@ -268,7 +268,7 @@ apps still run, move Rivlet to the Trash and confirm the alert, restore it.
 | Does `UNUserNotificationCenter` deliver for an ad-hoc signed bundle on macOS 26, or does it need a stable Team ID in the designated requirement? Test on day one with a throwaway bundle. | During implementation, T002 | Yes for T007 only |
 | Minimum macOS: 26.0 per Matt, since Liquid Glass and the toolbar style depend on it. Drop to 15 only if a tester needs it. | Matt, 2026-09-25 | No |
 | Should the maker offer "Move to /Applications" with an admin prompt, or stay in `~/Applications` only? | After v1 | No |
-| Todoist project name for this repo (rule says ask, not create). | Matt | No |
+| ~~Todoist project name~~ Resolved: App - Rivlet, created 2026-09-25 | Matt, 2026-09-25 | No |
 
 ## Security and Privacy
 

@@ -56,5 +56,5 @@ it for colors, typography, window layout, and settings. Bundle ID:
 
 ## Specs and Todoist
 
-Spec checklists mirror into the Todoist project for this repo under the
+Spec checklists mirror into the Todoist project "App - Rivlet" under the
 global Spec-to-Todoist sync rule in `~/.claude/CLAUDE.md`.
