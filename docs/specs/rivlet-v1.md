@@ -265,7 +265,7 @@ apps still run, move Rivlet to the Trash and confirm the alert, restore it.
 
 | Question | Resolved by | Blocks implementation? |
 |---|---|---|
-| Does `UNUserNotificationCenter` deliver for an ad-hoc signed bundle on macOS 26, or does it need a stable Team ID in the designated requirement? Test on day one with a throwaway bundle. | During implementation, T002 | Yes for T007 only |
+| ~~Notification Center with an ad-hoc signed bundle~~ Resolved: works. A generated app in `~/Applications` got its own permission prompt and delivers under its own name (tested 2026-09-26). | Implementation, 2026-09-26 | No |
 | Minimum macOS: 26.0 per Matt, since Liquid Glass and the toolbar style depend on it. Drop to 15 only if a tester needs it. | Matt, 2026-09-25 | No |
 | Should the maker offer "Move to /Applications" with an admin prompt, or stay in `~/Applications` only? | After v1 | No |
 | ~~Todoist project name~~ Resolved: App - Rivlet, created 2026-09-25 | Matt, 2026-09-25 | No |
@@ -285,17 +285,17 @@ same week the first release ships.
 
 ## Acceptance checklist
 
-- [ ] T001 XcodeGen scaffold: app, runtime framework, stub tool, template bundle, tests, macOS 26, Swift 6
-- [ ] T002 C stub: locate Rivlet, dlopen runtime, call entry point, missing-runtime alert
-- [ ] T003 AppConfig model and bundle writer: Info.plist, icns, ad-hoc sign, registry, with tests
-- [ ] T004 Runtime window: WKWebView host, hidden titlebar, toolbar toggle, menus, navigation and find shortcuts
-- [ ] T005 [P] Navigation policy: registrable domain match, allowed hosts, popups as windows, default browser handoff
-- [ ] T006 [P] Downloads to ~/Downloads, camera and microphone permission, Safari user agent with override
-- [ ] T007 [P] Web Notifications shim to Notification Center with click-through
-- [ ] T008 [P] Dock badge from title pattern and Badging API shim
-- [ ] T009 Userscripts and user CSS: support folder, include globs, injection, editor
-- [ ] T010 Maker window: app list, New App sheet, icon fetch and drop, open, reveal, trash
-- [ ] T011 Generated app Settings window: toolbar, badge, notifications, allowed hosts, user agent, scripts
+- [x] T001 XcodeGen scaffold: app, runtime framework, stub tool, template bundle, tests, macOS 26, Swift 6
+- [x] T002 C stub: locate Rivlet, dlopen runtime, call entry point, missing-runtime alert
+- [x] T003 AppConfig model and bundle writer: Info.plist, icns, ad-hoc sign, registry, with tests
+- [x] T004 Runtime window: WKWebView host, hidden titlebar, toolbar toggle, menus, navigation and find shortcuts
+- [x] T005 [P] Navigation policy: registrable domain match, allowed hosts, popups as windows, default browser handoff
+- [x] T006 [P] Downloads to ~/Downloads, camera and microphone permission, Safari user agent with override
+- [x] T007 [P] Web Notifications shim to Notification Center with click-through
+- [x] T008 [P] Dock badge from title pattern and Badging API shim
+- [x] T009 Userscripts and user CSS: support folder, include globs, injection, editor
+- [x] T010 Maker window: app list, New App sheet, icon fetch and drop, open, reveal, trash
+- [x] T011 Generated app Settings window: toolbar, badge, notifications, allowed hosts, user agent, scripts
 - [ ] T012 Sparkle updater, About window, app icon, light and dark verification
 - [ ] T013 README, RELEASING.md, privacy page entry, first tagged release prep
 
