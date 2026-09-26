@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>RivletStub</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.inklinglabs.rivlet.template</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Rivlet Template</string>
+	<key>CFBundleDisplayName</key>
+	<string>Rivlet Template</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>26.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Made with Rivlet</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The website in this app asked to use the camera.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The website in this app asked to use the microphone.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>The website in this app asked for your location.</string>
+	<key>RivletApp</key>
+	<true/>
+	<key>RivletURL</key>
+	<string>about:blank</string>
+	<key>RivletTemplateVersion</key>
+	<integer>1</integer>
+</dict>
+</plist>

@@ -1,0 +1,114 @@
+name: Rivlet
+options:
+  bundleIdPrefix: com.inklinglabs
+  deploymentTarget:
+    macOS: "26.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+  configs:
+    # This Mac has no development certificate; release builds override
+    # these on the xcodebuild command line (see .github/workflows/release.yml).
+    Debug:
+      CODE_SIGN_STYLE: Manual
+      CODE_SIGN_IDENTITY: "-"
+      DEVELOPMENT_TEAM: ""
+targets:
+  RivletRuntime:
+    type: framework
+    platform: macOS
+    sources:
+      - RivletRuntime
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inklinglabs.rivlet.runtime
+        GENERATE_INFOPLIST_FILE: true
+        SKIP_INSTALL: true
+        DYLIB_INSTALL_NAME_BASE: "@rpath"
+        LD_RUNPATH_SEARCH_PATHS: "@loader_path/Frameworks @executable_path/../Frameworks"
+        ENABLE_HARDENED_RUNTIME: true
+  RivletStub:
+    type: tool
+    platform: macOS
+    sources:
+      - path: RivletStub
+        excludes:
+          - Template
+    dependencies:
+      - sdk: CoreFoundation.framework
+      - sdk: CoreServices.framework
+    settings:
+      base:
+        PRODUCT_NAME: RivletStub
+        # Generated apps are re-signed ad hoc without library validation so
+        # they can load the Developer ID signed runtime.
+        ENABLE_HARDENED_RUNTIME: false
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        DEVELOPMENT_TEAM: ""
+  Rivlet:
+    type: application
+    platform: macOS
+    sources:
+      - Rivlet
+    dependencies:
+      - target: RivletRuntime
+        embed: true
+        codeSign: true
+      - target: RivletStub
+        embed: false
+        link: false
+    postBuildScripts:
+      - name: Assemble RivletTemplate.app
+        path: scripts/assemble-template.sh
+        inputFiles:
+          - $(BUILT_PRODUCTS_DIR)/RivletStub
+          - $(SRCROOT)/RivletStub/Template/Info.plist
+        outputFiles:
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/RivletTemplate.app/Contents/MacOS/RivletStub
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.inklinglabs.rivlet
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_FILE: Rivlet/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        ENABLE_APP_SANDBOX: false
+        ENABLE_HARDENED_RUNTIME: true
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+  RivletRuntimeTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - RivletRuntimeTests
+    dependencies:
+      - target: RivletRuntime
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+  RivletTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - RivletTests
+    dependencies:
+      - target: Rivlet
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: true
+schemes:
+  Rivlet:
+    build:
+      targets:
+        Rivlet: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RivletRuntimeTests
+        - RivletTests
+    archive:
+      config: Release
