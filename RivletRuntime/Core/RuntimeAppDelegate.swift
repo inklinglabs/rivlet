@@ -6,28 +6,59 @@ final class RuntimeAppDelegate: NSObject, NSApplicationDelegate {
     static var retained: RuntimeAppDelegate?
 
     let arguments: [String]
-    private var window: NSWindow?
+    private var context: RuntimeContext?
+    private var settingsWindow: RuntimeSettingsWindowController?
 
     init(arguments: [String]) {
         self.arguments = arguments
     }
 
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        guard let identity = AppIdentity(bundle: .main) else {
+            let alert = NSAlert()
+            alert.messageText = "This app is missing its Rivlet settings"
+            alert.informativeText = "Its Info.plist has no RivletURL. Delete it and make it again in Rivlet."
+            alert.runModal()
+            NSApp.terminate(nil)
+            return
+        }
+        let context = RuntimeContext(identity: identity)
+        self.context = context
+        NSApp.mainMenu = MenuBuilder.build(appName: identity.name)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let identity = AppIdentity(bundle: .main)
-        let url = identity?.url ?? URL(string: "https://inkling-labs.com")!
-        let webView = WKWebView(frame: .zero)
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1100, height: 760),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = identity?.name ?? "Rivlet"
-        window.contentView = webView
-        window.center()
-        window.makeKeyAndOrderFront(nil)
-        webView.load(URLRequest(url: url))
-        self.window = window
+        showMainWindow()
         NSApp.activate()
+        if arguments.contains("--settings") {
+            showSettings(nil)
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { showMainWindow() }
+        return true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    func showMainWindow() {
+        context?.windows.showMainWindow()
+    }
+
+    @objc func showSettings(_ sender: Any?) {
+        guard let context else { return }
+        if settingsWindow == nil {
+            settingsWindow = RuntimeSettingsWindowController(context: context)
+        }
+        NSApp.activate()
+        settingsWindow?.showWindow(nil)
+        settingsWindow?.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc func openRivletSite(_ sender: Any?) {
+        NSWorkspace.shared.open(RivletPaths.releasesURL)
     }
 }
