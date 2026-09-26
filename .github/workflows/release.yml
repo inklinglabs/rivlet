@@ -1,10 +1,22 @@
 # Inkling Labs standard release workflow for Xcode macOS apps.
 # Trigger: Matt pushes a v* tag on main. See dev-standards/STANDARDS.md.
-# Replace Rivlet with the app/scheme name (project-init does this).
+# This repo is public: the tag push is the ONLY trigger. Never add
+# pull_request or pull_request_target here; they could expose the secrets.
 #
 # Required repo secrets (canonical names, no exceptions):
 #   APPLE_TEAM_ID, MACOS_CERTIFICATE, MACOS_CERTIFICATE_PWD,
 #   ASC_API_KEY, ASC_API_KEY_ID, ASC_API_ISSUER_ID
+# Repo-specific secret for Sparkle updates:
+#   SPARKLE_PRIVATE_KEY: the shared Inkling Labs EdDSA private key, set by
+#   scripts/set_sparkle_secret.py. The matching public key lives in
+#   Rivlet/Info.plist as SUPublicEDKey.
+#
+# Each release carries three assets, all hosted here on GitHub Releases:
+#   Rivlet-<version>.dmg  the signed enclosure the appcast points at
+#   Rivlet.dmg            byte copy, for the permanent latest/download link
+#   appcast.xml             the Sparkle feed (SUFeedURL uses latest/download)
+# Never mark a real release draft or prerelease, and never replace a
+# published DMG: "latest" would skip it, and the signature covers its bytes.
 
 name: Release
 
@@ -22,18 +34,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Apps that generate their Xcode project with XcodeGen gitignore the
-      # .xcodeproj, so the runner has to build it from project.yml first.
-      # Skipped for apps that commit their .xcodeproj.
-      - name: Generate Xcode project
-        if: hashFiles('project.yml') != ''
-        run: |
-          brew install xcodegen
-          xcodegen generate
-
       - name: Version from tag
         id: version
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          # Fail before the slow build and notarization, not after them.
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "SPARKLE_PRIVATE_KEY is not set. Run scripts/set_sparkle_secret.py." >&2
+            exit 1
+          fi
           VERSION="${GITHUB_REF_NAME#v}"
           PLIST=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Rivlet/Info.plist)
           if [ "$PLIST" != "$VERSION" ]; then
@@ -41,6 +51,13 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # Sparkle compares CFBundleVersion, so keep it in step with the tag.
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" Rivlet/Info.plist
+
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
 
       - name: Import signing certificate
         env:
@@ -72,8 +89,32 @@ jobs:
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
             OTHER_CODE_SIGN_FLAGS="--timestamp --options=runtime"
-          codesign --verify --deep --strict --verbose=2 \
-            build/Build/Products/Release/Rivlet.app
+          # Xcode signs Sparkle.framework but not the helpers nested inside it,
+          # and notarization rejects their upstream signatures. Re-sign those
+          # inside out, then the framework, then the app.
+          APP=build/Build/Products/Release/Rivlet.app
+          SPARKLE="$APP/Contents/Frameworks/Sparkle.framework/Versions/B"
+          for helper in "$SPARKLE/XPCServices/Installer.xpc" "$SPARKLE/XPCServices/Downloader.xpc" \
+                        "$SPARKLE/Autoupdate" "$SPARKLE/Updater.app"; do
+            codesign --force --sign "Developer ID Application" --timestamp --options=runtime \
+              --preserve-metadata=entitlements "$helper"
+          done
+          codesign --force --sign "Developer ID Application" --timestamp --options=runtime \
+            "$APP/Contents/Frameworks/Sparkle.framework"
+          # Rivlet has no entitlements file (not sandboxed), so none is passed.
+          codesign --force --sign "Developer ID Application" --timestamp --options=runtime "$APP"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          # The app template that generated apps are copied from is signed by
+          # scripts/assemble-template.sh during the build; make sure it is.
+          codesign -dvv "$APP/Contents/Helpers/RivletTemplate.app" 2>&1 | grep -E "Authority=Developer ID Application" \
+            || { echo "RivletTemplate.app is not signed with Developer ID" >&2; exit 1; }
+          codesign -dvv "$APP/Contents/Frameworks/RivletRuntime.framework" 2>&1 | grep -E "Authority=Developer ID Application" \
+            || { echo "RivletRuntime.framework is not signed with Developer ID" >&2; exit 1; }
+          for helper in "$SPARKLE/XPCServices/Installer.xpc" "$SPARKLE/XPCServices/Downloader.xpc" \
+                        "$SPARKLE/Autoupdate" "$SPARKLE/Updater.app"; do
+            codesign -dvv "$helper" 2>&1 | grep -E "Authority=Developer ID Application|flags=.*runtime|Timestamp=" \
+              || { echo "helper $helper is not signed for notarization" >&2; exit 1; }
+          done
 
       - name: Package DMG
         run: |
@@ -94,21 +135,69 @@ jobs:
           ASC_API_ISSUER_ID: ${{ secrets.ASC_API_ISSUER_ID }}
         run: |
           echo "$ASC_API_KEY" | base64 --decode > $RUNNER_TEMP/AuthKey.p8
+          KEY_ARGS=(--key $RUNNER_TEMP/AuthKey.p8 --key-id "$ASC_API_KEY_ID" --issuer "$ASC_API_ISSUER_ID")
           xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" \
-            --key $RUNNER_TEMP/AuthKey.p8 \
-            --key-id "$ASC_API_KEY_ID" \
-            --issuer "$ASC_API_ISSUER_ID" \
-            --wait
+            "${KEY_ARGS[@]}" --wait --output-format json > $RUNNER_TEMP/notary.json || true
+          cat $RUNNER_TEMP/notary.json
+          SUBMISSION_ID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['id'])" $RUNNER_TEMP/notary.json)
+          STATUS=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['status'])" $RUNNER_TEMP/notary.json)
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "Notarization status: $STATUS. Apple's log follows." >&2
+            xcrun notarytool log "$SUBMISSION_ID" "${KEY_ARGS[@]}"
+            rm $RUNNER_TEMP/AuthKey.p8
+            exit 1
+          fi
           xcrun stapler staple "Rivlet-${{ steps.version.outputs.version }}.dmg"
           xcrun stapler validate "Rivlet-${{ steps.version.outputs.version }}.dmg"
           rm $RUNNER_TEMP/AuthKey.p8
 
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          SPARKLE_VERSION: "2.9.6"
+          DOWNLOAD_PREFIX: https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/
+        run: |
+          # A release without an appcast would strand every installed copy,
+          # so a missing key fails the job instead of skipping this step.
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "SPARKLE_PRIVATE_KEY is not set. Run scripts/set_sparkle_secret.py." >&2
+            exit 1
+          fi
+          PUBLIC_KEY=$(/usr/libexec/PlistBuddy -c "Print SUPublicEDKey" Rivlet/Info.plist)
+          if [ -z "$PUBLIC_KEY" ]; then
+            echo "SUPublicEDKey in Rivlet/Info.plist is empty." >&2
+            exit 1
+          fi
+          curl -sL -o "$RUNNER_TEMP/sparkle.tar.xz" \
+            "https://github.com/sparkle-project/Sparkle/releases/download/$SPARKLE_VERSION/Sparkle-$SPARKLE_VERSION.tar.xz"
+          mkdir -p "$RUNNER_TEMP/sparkle" && tar -xf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
+          mkdir -p appcast
+          cp "Rivlet-${{ steps.version.outputs.version }}.dmg" appcast/
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_key"
+          "$RUNNER_TEMP/sparkle/bin/generate_appcast" \
+            --ed-key-file "$RUNNER_TEMP/sparkle_key" \
+            --download-url-prefix "$DOWNLOAD_PREFIX" \
+            --link "https://github.com/${{ github.repository }}" \
+            -o appcast/appcast.xml \
+            appcast/
+          rm -f "$RUNNER_TEMP/sparkle_key"
+          cat appcast/appcast.xml
+          grep -q 'sparkle:edSignature=' appcast/appcast.xml \
+            || { echo "appcast enclosure has no edSignature" >&2; exit 1; }
+          grep -q "url=\"$DOWNLOAD_PREFIX" appcast/appcast.xml \
+            || { echo "appcast enclosure does not point at $DOWNLOAD_PREFIX" >&2; exit 1; }
+
       - name: Create GitHub release
         run: |
+          # Versionless byte copy: the permanent latest/download/Rivlet.dmg link.
+          cp "Rivlet-${{ steps.version.outputs.version }}.dmg" Rivlet.dmg
           gh release create "$GITHUB_REF_NAME" \
             "Rivlet-${{ steps.version.outputs.version }}.dmg" \
+            Rivlet.dmg \
+            appcast/appcast.xml \
             --repo "$GITHUB_REPOSITORY" \
             --title "Rivlet ${{ steps.version.outputs.version }}" \
-            --generate-notes
+            --generate-notes \
+            --latest
         env:
           GH_TOKEN: ${{ github.token }}

@@ -28,5 +28,9 @@
 	<string>Copyright 2026 Inkling Labs. MIT License.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>https://github.com/inklinglabs/rivlet/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>gsKPzHew8410akjlCq8devpqQIEW3POBmQbtaDciGOc=</string>
 </dict>
 </plist>
