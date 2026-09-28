@@ -22,3 +22,6 @@ xcuserdata/
 
 # XcodeGen output
 *.xcodeproj
+
+# Icon source files stay local
+*.sketch
