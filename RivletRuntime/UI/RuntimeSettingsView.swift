@@ -53,8 +53,13 @@ private struct GeneralSettingsPane: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Browser identity") {
-                TextField("Custom user agent", text: $userAgent, prompt: Text("Safari on this Mac"))
-                    .onSubmit(saveUserAgent)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Custom user agent")
+                    TextField("Custom user agent", text: $userAgent, prompt: Text("Safari on this Mac"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(saveUserAgent)
+                }
                 Text("Leave empty to look like Safari, which is what sign-in pages expect. Changing this reloads the page.")
                     .font(.caption).foregroundStyle(.secondary)
                 HStack {
@@ -92,8 +97,11 @@ private struct LinksSettingsPane: View {
                     }
                 }
                 .frame(minHeight: 140)
+                .inputBorder()
                 HStack {
-                    TextField("example.com or .example.com", text: $newHost)
+                    TextField("Host to allow", text: $newHost, prompt: Text("example.com or .example.com"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
                         .onSubmit(addHost)
                     Button("Add", action: addHost).disabled(newHost.trimmingCharacters(in: .whitespaces).isEmpty)
                     Button("Remove") {
@@ -135,9 +143,11 @@ private struct ScriptsSettingsPane: View {
                         }
                     }
                     .frame(width: 160, height: 180)
+                    .inputBorder()
                     TextEditor(text: $source)
                         .font(.system(.body, design: .monospaced))
                         .frame(height: 180)
+                        .inputBorder()
                         .onChange(of: source) { _, _ in dirty = selected != nil }
                 }
                 HStack {
@@ -153,6 +163,7 @@ private struct ScriptsSettingsPane: View {
                 TextEditor(text: $css)
                     .font(.system(.body, design: .monospaced))
                     .frame(height: 120)
+                    .inputBorder()
                 HStack {
                     Spacer()
                     Button("Save and Reload") {
@@ -203,5 +214,13 @@ private struct ScriptsSettingsPane: View {
         try? source.write(to: selected, atomically: true, encoding: .utf8)
         dirty = false
         context.reloadUserContent()
+    }
+}
+
+private extension View {
+    /// A thin rounded border so editors and lists read as inputs in light and dark mode.
+    func inputBorder() -> some View {
+        clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
     }
 }

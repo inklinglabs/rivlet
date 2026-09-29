@@ -42,10 +42,15 @@ struct NewAppSheet: View {
             Text("New App").font(.title2.weight(.semibold)).padding(.bottom, 16)
             Form {
                 Section {
-                    TextField("Web address", text: $urlText, prompt: Text("https://mail.google.com"))
-                        .textContentType(.URL)
-                        .onSubmit(inspectNow)
-                        .onChange(of: urlText) { _, _ in scheduleInspect() }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Web address")
+                        TextField("Web address", text: $urlText, prompt: Text("https://mail.google.com"))
+                            .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
+                            .textContentType(.URL)
+                            .onSubmit(inspectNow)
+                            .onChange(of: urlText) { _, _ in scheduleInspect() }
+                    }
                     if let urlProblem {
                         Text(urlProblem).font(.caption).foregroundStyle(.red)
                     } else if inspecting {
@@ -54,8 +59,13 @@ struct NewAppSheet: View {
                             Text("Looking up the site\u{2019}s name and icon").font(.caption).foregroundStyle(.secondary)
                         }
                     }
-                    TextField("Name", text: $name)
-                        .onChange(of: name) { _, _ in nameEdited = true }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Name")
+                        TextField("Name", text: $name, prompt: Text("Filled in from the site\u{2019}s title"))
+                            .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
+                            .onChange(of: name) { _, _ in nameEdited = true }
+                    }
                 }
                 Section("Icon") {
                     HStack(alignment: .top, spacing: 16) {
