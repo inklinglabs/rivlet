@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 (2026-09-28)
 
 - First version. Make a Mac app from any website: own Dock icon, own logins
   and cookies, Dock badge from the page title or the Badging API, Web

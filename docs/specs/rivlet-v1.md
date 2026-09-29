@@ -297,7 +297,7 @@ same week the first release ships.
 - [x] T010 Maker window: app list, New App sheet, icon fetch and drop, open, reveal, trash
 - [x] T011 Generated app Settings window: toolbar, badge, notifications, allowed hosts, user agent, scripts
 - [x] T012 Sparkle updater, About window, app icon, light and dark verification
-- [ ] T013 README, RELEASING.md, privacy page entry, first tagged release prep
+- [x] T013 README, RELEASING.md, privacy page entry, first tagged release prep
 
 ---
 
