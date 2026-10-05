@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 (2026-10-05)
+
+- Fixed: switching away from Rivlet and back no longer loses the app you
+  had selected.
+- Fixed: apps kept outside your Applications folder no longer drop out of
+  the list. If one went missing, it is still on disk and still runs.
+
 ## 1.0.1 (2026-10-05)
 
 - Fixed: a new app that reused the name of an earlier one could show the

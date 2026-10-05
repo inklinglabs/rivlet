@@ -15,8 +15,12 @@ final class AppRegistry {
 
     func load() {
         var loaded: [GeneratedApp] = []
+        // Must match the encoder in save(). When the dates fail to decode,
+        // every app is adopted again under a new ID and the selection is lost.
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
         if let data = try? Data(contentsOf: file),
-           let decoded = try? JSONDecoder().decode([GeneratedApp].self, from: data) {
+           let decoded = try? decoder.decode([GeneratedApp].self, from: data) {
             loaded = decoded.filter(\.exists)
         }
         for adopted in Self.scanForForeignApps(knownPaths: Set(loaded.map(\.bundlePath))) {
