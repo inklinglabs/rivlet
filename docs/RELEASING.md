@@ -41,7 +41,7 @@ orphan every installed copy of every app.
 Set this repo's private-key secret once:
 
 ```bash
-cd ~/Development/inkling-labs/projects/rivlet && python3 scripts/set_sparkle_secret.py
+cd ~/Developer/inkling-labs/projects/rivlet && python3 scripts/set_sparkle_secret.py
 ```
 
 The script reads the key from 1Password (Touch ID prompt), checks that the
@@ -59,13 +59,13 @@ workflow fails at its first step if the secret is missing.
 3. Tag from `main`. The guard refuses to tag if the merge did not land:
 
    ```bash
-   cd ~/Development/inkling-labs/projects/rivlet && git checkout main && git pull && [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Rivlet/Info.plist)" = "X.Y.Z" ] && git tag vX.Y.Z && git push origin vX.Y.Z
+   cd ~/Developer/inkling-labs/projects/rivlet && git checkout main && git pull && [ "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Rivlet/Info.plist)" = "X.Y.Z" ] && git tag vX.Y.Z && git push origin vX.Y.Z
    ```
 
 4. When the workflow finishes, verify:
 
    ```bash
-   cd ~/Development/inkling-labs/projects/rivlet && gh release view vX.Y.Z --json isDraft,isPrerelease,assets
+   cd ~/Developer/inkling-labs/projects/rivlet && gh release view vX.Y.Z --json isDraft,isPrerelease,assets
    curl -sIL https://github.com/inklinglabs/rivlet/releases/latest/download/appcast.xml | grep -i '^HTTP'
    curl -sL https://github.com/inklinglabs/rivlet/releases/latest/download/appcast.xml | grep -E 'sparkle:(version|edSignature)|enclosure url'
    spctl -a -vv /Applications/Rivlet.app

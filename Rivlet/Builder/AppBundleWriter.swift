@@ -50,6 +50,10 @@ enum AppBundleWriter {
                 try await IconRenderer.writeICNS(png: png, to: destination.appending(path: "Contents/Resources/AppIcon.icns"))
             }
             try await Self.sign(destination)
+            // The copy keeps the template's modification date, so every app
+            // made at this path looks unchanged to the icon cache and the
+            // Dock keeps showing the icon of an earlier app with this name.
+            try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: destination.path)
         } catch {
             try? FileManager.default.removeItem(at: destination)
             throw error

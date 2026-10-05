@@ -28,7 +28,7 @@ This repo follows the Inkling Labs standards
 
 UI design language and Mac app patterns live in the dev-standards repo at
 `docs/mac-app-styling.md` (locally
-`~/Development/inkling-labs/dev-standards/docs/mac-app-styling.md`). Follow
+`~/Developer/inkling-labs/dev-standards/docs/mac-app-styling.md`). Follow
 it for colors, typography, window layout, and settings. Bundle ID:
 `com.inklinglabs.rivlet`. Generated apps use
 `com.inklinglabs.rivlet.app.<slug>-<hex>`.

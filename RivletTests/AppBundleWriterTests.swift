@@ -21,6 +21,8 @@ import Testing
             .write(to: template.appending(path: "Contents/Info.plist"))
         try Data("#!/bin/sh\nexit 0\n".utf8).write(to: template.appending(path: "Contents/MacOS/RivletStub"))
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: template.appending(path: "Contents/MacOS/RivletStub").path)
+        let templateDate = Date(timeIntervalSinceNow: -86_400)
+        try FileManager.default.setAttributes([.modificationDate: templateDate], ofItemAtPath: template.path)
 
         let request = AppBundleRequest(name: "Test Mail", url: URL(string: "https://mail.example.com/")!, iconPNG: nil, destinationDirectory: root.appending(path: "out"))
         let app = try await AppBundleWriter.build(request, template: template)
@@ -32,6 +34,10 @@ import Testing
         #expect(info?["RivletURL"] as? String == "https://mail.example.com/")
         #expect(info?["RivletApp"] as? Bool == true)
         #expect(info?["CFBundleDisplayName"] as? String == "Test Mail")
+
+        // A bundle that keeps the template's date gets a stale Dock icon.
+        let modified = try FileManager.default.attributesOfItem(atPath: app.bundlePath)[.modificationDate] as? Date
+        #expect(try #require(modified) > templateDate.addingTimeInterval(3_600))
 
         await #expect(throws: AppBundleError.self) {
             _ = try await AppBundleWriter.build(request, template: template)

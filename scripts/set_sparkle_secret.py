@@ -13,7 +13,7 @@ private key to disk, and never prints it. 1Password prompts (Touch ID)
 when the script runs.
 
 Usage:
-    cd ~/Development/inkling-labs/projects/rivlet && python3 scripts/set_sparkle_secret.py
+    cd ~/Developer/inkling-labs/projects/rivlet && python3 scripts/set_sparkle_secret.py
 
 Requires the 1Password CLI with desktop app integration and gh authenticated
 for the inklinglabs/rivlet repo.
