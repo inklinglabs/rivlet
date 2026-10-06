@@ -1,3 +1,4 @@
+import RivletRuntime
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -12,6 +13,7 @@ struct NewAppSheet: View {
     @State private var customIcon: NSImage?
     @State private var roundCorners = true
     @State private var destination = MakerSettings.appsFolder
+    @State private var mode: AppMode = .window
     @State private var inspecting = false
     @State private var creating = false
     @State private var error: String?
@@ -89,6 +91,14 @@ struct NewAppSheet: View {
                         }
                     }
                 }
+                Section("Mode") {
+                    Picker("Show this app as", selection: $mode) {
+                        ForEach(AppMode.allCases) { mode in Text(mode.title).tag(mode) }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                    Text(modeHelp).font(.caption).foregroundStyle(.secondary)
+                }
                 Section("Location") {
                     HStack {
                         Text(destination.path(percentEncoded: false)).truncationMode(.middle).lineLimit(1)
@@ -148,6 +158,14 @@ struct NewAppSheet: View {
         }
     }
 
+    private var modeHelp: String {
+        switch mode {
+        case .window: return "A normal window with its own Dock icon. You can change this later."
+        case .menuBar: return "An icon in the menu bar with the page in a popover, one click or shortcut away."
+        case .floating: return "A window that stays above other windows while you work."
+        }
+    }
+
     static func nameFromHost(_ url: URL) -> String {
         var host = url.host() ?? "App"
         if host.hasPrefix("www.") { host.removeFirst(4) }
@@ -181,7 +199,7 @@ struct NewAppSheet: View {
         creating = true
         error = nil
         let png = IconRenderer.pngData(effectiveIcon, side: IconRenderer.canvas)
-        let request = AppBundleRequest(name: name.trimmingCharacters(in: .whitespaces), url: url, iconPNG: png, destinationDirectory: destination)
+        let request = AppBundleRequest(name: name.trimmingCharacters(in: .whitespaces), url: url, iconPNG: png, destinationDirectory: destination, mode: mode)
         Task {
             do {
                 _ = try await state.create(request)

@@ -362,7 +362,7 @@ generated app against the 2.0 runtime and a 2.0 settings file against the
 - [x] T005 [P] Detach popover to the main window and reattach, state preserved
 - [x] T006 [P] FloatingPresenter: floating level, all Spaces option, separate frame autosave
 - [x] T007 Runtime Settings Mode pane with per-mode options and help text
-- [ ] T008 Maker: mode picker in New App sheet and app detail, seed on create, notify running app, Open behavior for menu bar apps
+- [x] T008 Maker: mode picker in New App sheet and app detail, seed on create, notify running app, Open behavior for menu bar apps
 - [ ] T009 README, changelog, CLAUDE.md architecture line, release prep held for Matt
 
 ---

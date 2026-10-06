@@ -24,7 +24,7 @@ import Testing
         let templateDate = Date(timeIntervalSinceNow: -86_400)
         try FileManager.default.setAttributes([.modificationDate: templateDate], ofItemAtPath: template.path)
 
-        let request = AppBundleRequest(name: "Test Mail", url: URL(string: "https://mail.example.com/")!, iconPNG: nil, destinationDirectory: root.appending(path: "out"))
+        let request = AppBundleRequest(name: "Test Mail", url: URL(string: "https://mail.example.com/")!, iconPNG: nil, destinationDirectory: root.appending(path: "out"), mode: .menuBar)
         let app = try await AppBundleWriter.build(request, template: template)
         #expect(app.bundlePath.hasSuffix("/out/Test Mail.app"))
         #expect(app.bundleIdentifier.hasPrefix("com.inklinglabs.rivlet.app.test-mail-"))
@@ -34,6 +34,11 @@ import Testing
         #expect(info?["RivletURL"] as? String == "https://mail.example.com/")
         #expect(info?["RivletApp"] as? Bool == true)
         #expect(info?["CFBundleDisplayName"] as? String == "Test Mail")
+
+        // The mode is seeded into the support folder, never into the bundle.
+        #expect(info?["mode"] == nil)
+        let seededMode = await MainActor.run { SettingsStore(bundleIdentifier: app.bundleIdentifier).settings.mode }
+        #expect(seededMode == .menuBar)
 
         // A bundle that keeps the template's date gets a stale Dock icon.
         let modified = try FileManager.default.attributesOfItem(atPath: app.bundlePath)[.modificationDate] as? Date
