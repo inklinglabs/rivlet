@@ -355,7 +355,7 @@ generated app against the 2.0 runtime and a 2.0 settings file against the
 
 ## Acceptance checklist
 
-- [ ] T001 Settings model: mode, menu bar and floating options, hotkey, decode tests both directions
+- [x] T001 Settings model: mode, menu bar and floating options, hotkey, decode tests both directions
 - [ ] T002 ModePresenter protocol, WindowPresenter, ModeCoordinator with live switch and distributed notification
 - [ ] T003 MenuBarPresenter: status item with site icon, popover hosting the web view, click toggle, right-click menu, Escape
 - [ ] T004 [P] Global hotkey registrar and recorder view with collision and no-modifier handling

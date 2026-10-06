@@ -13,12 +13,17 @@ public struct AppSettings: Codable, Sendable, Equatable {
     /// nil means "the Safari string for this macOS".
     public var userAgent: String?
     public var zoom: Double = 1.0
+    /// Window, menu bar, or floating. Added in 1.1; older runtimes ignore it.
+    public var mode: AppMode = .window
+    public var menuBar = MenuBarOptions()
+    public var floating = FloatingOptions()
 
     public init() {}
 
     private enum CodingKeys: String, CodingKey {
         case showToolbar, badgeFromTitle, badgeFromAPI, notificationsEnabled
         case keepRunningWhenWindowCloses, allowedHosts, userAgent, zoom
+        case mode, menuBar, floating
     }
 
     public init(from decoder: Decoder) throws {
@@ -32,5 +37,10 @@ public struct AppSettings: Codable, Sendable, Equatable {
         allowedHosts = try c.decodeIfPresent([String].self, forKey: .allowedHosts) ?? d.allowedHosts
         userAgent = try c.decodeIfPresent(String.self, forKey: .userAgent)
         zoom = try c.decodeIfPresent(Double.self, forKey: .zoom) ?? d.zoom
+        // An unknown mode string from a newer runtime falls back to a window
+        // rather than failing the whole decode.
+        mode = (try? c.decodeIfPresent(String.self, forKey: .mode)).flatMap { $0 }.flatMap(AppMode.init(rawValue:)) ?? d.mode
+        menuBar = try c.decodeIfPresent(MenuBarOptions.self, forKey: .menuBar) ?? d.menuBar
+        floating = try c.decodeIfPresent(FloatingOptions.self, forKey: .floating) ?? d.floating
     }
 }
