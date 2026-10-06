@@ -13,14 +13,20 @@ final class WindowManager {
         self.context = context
     }
 
+    /// The main window and its web view, created on first use. Presenters
+    /// decide how and where it shows.
+    @discardableResult
+    func ensureMain() -> BrowserWindowController {
+        if let main { return main }
+        let controller = BrowserWindowController(context: context, configuration: context.makeConfiguration(), isMain: true)
+        controller.webView.load(URLRequest(url: context.identity.url))
+        main = controller
+        return controller
+    }
+
+    /// Shows the app the way its mode presenter does it.
     func showMainWindow() {
-        if main == nil {
-            let controller = BrowserWindowController(context: context, configuration: context.makeConfiguration(), isMain: true)
-            controller.webView.load(URLRequest(url: context.identity.url))
-            main = controller
-        }
-        main?.showWindow(nil)
-        main?.window?.makeKeyAndOrderFront(nil)
+        context.modes.show()
     }
 
     func makePopup(configuration: WKWebViewConfiguration, features: WKWindowFeatures) -> BrowserWindowController {

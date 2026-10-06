@@ -25,11 +25,11 @@ final class RuntimeAppDelegate: NSObject, NSApplicationDelegate {
         let context = RuntimeContext(identity: identity)
         self.context = context
         NSApp.mainMenu = MenuBuilder.build(appName: identity.name)
+        context.modes.start()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         showMainWindow()
-        NSApp.activate()
         if arguments.contains("--settings") {
             showSettings(nil)
         }

@@ -10,6 +10,7 @@ final class RuntimeContext {
     let badge: BadgeController
     let downloads: DownloadManager
     private(set) var windows: WindowManager!
+    private(set) var modes: ModeCoordinator!
 
     var policy: NavigationPolicy {
         NavigationPolicy(appURL: identity.url, allowedHosts: store.settings.allowedHosts)
@@ -22,6 +23,7 @@ final class RuntimeContext {
         self.badge = BadgeController()
         self.downloads = DownloadManager()
         self.windows = WindowManager(context: self)
+        self.modes = ModeCoordinator(context: self)
     }
 
     /// Safari's user agent string for the running macOS, unless the user
@@ -62,11 +64,11 @@ final class RuntimeContext {
     }
 
     /// Called after settings that affect page content change.
-    func reloadUserContent() {
+    func reloadUserContent(reloadPage: Bool = true) {
         for controller in windows.all {
             installUserContent(into: controller.webView.configuration.userContentController)
             controller.applySettings()
-            controller.webView.reload()
+            if reloadPage { controller.webView.reload() }
         }
     }
 }

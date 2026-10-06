@@ -31,11 +31,7 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSToo
         window.collectionBehavior.insert(.fullScreenPrimary)
         window.minSize = NSSize(width: 360, height: 240)
         window.contentView = webView
-        if isMain {
-            window.setFrameAutosaveName("RivletMainWindow")
-        } else {
-            window.center()
-        }
+        if !isMain { window.center() }
 
         coordinator.owner = self
         webView.navigationDelegate = coordinator
@@ -97,9 +93,36 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSToo
         }
     }
 
+    // MARK: Web view hosting
+
+    /// A presenter can take the web view out of the window (the menu bar
+    /// popover does) and put it back. The window keeps an empty content
+    /// view meanwhile so AppKit has something to lay out.
+    var hostsWebView: Bool { webView.window === window }
+
+    func embedWebView() {
+        guard !hostsWebView else { return }
+        webView.removeFromSuperview()
+        window?.contentView = webView
+        findBar.webView = webView
+    }
+
+    func releaseWebView() -> WKWebView {
+        if hostsWebView {
+            window?.contentView = NSView()
+        }
+        webView.removeFromSuperview()
+        return webView
+    }
+
+    /// Set by a presenter that wants to intercept the close button. Return
+    /// true to let the window close (or hide) as usual.
+    var closeHandler: ((BrowserWindowController) -> Bool)?
+
     // MARK: Window delegate
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
+        if let closeHandler, !closeHandler(self) { return false }
         if isMain && context.store.settings.keepRunningWhenWindowCloses {
             sender.orderOut(nil)
             return false

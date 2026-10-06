@@ -5,6 +5,10 @@ public enum RivletPaths {
     public static let makerBundleIdentifier = "com.inklinglabs.rivlet"
     public static let generatedBundlePrefix = "com.inklinglabs.rivlet.app."
     public static let releasesURL = URL(string: "https://github.com/inklinglabs/rivlet/releases/latest")!
+    /// Posted over `DistributedNotificationCenter` by the maker after it
+    /// writes a generated app's `settings.json`. The notification object is
+    /// that app's bundle identifier; a running app reloads and applies.
+    public static let settingsChangedNotification = Notification.Name("com.inklinglabs.rivlet.settingsChanged")
 
     /// `~/Library/Application Support/Rivlet`
     public static var supportDirectory: URL {

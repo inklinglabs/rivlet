@@ -15,7 +15,8 @@ public func RivletRuntimeMain(
         let delegate = RuntimeAppDelegate(arguments: arguments)
         RuntimeAppDelegate.retained = delegate
         app.delegate = delegate
-        app.setActivationPolicy(.regular)
+        // The activation policy is set by the mode presenter once settings
+        // are loaded, so a hidden-Dock app never flips to regular first.
         app.run()
     }
     return 0
