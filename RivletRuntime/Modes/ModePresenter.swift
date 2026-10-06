@@ -16,6 +16,10 @@ protocol ModePresenter: AnyObject {
     /// click, the maker's Open button.
     func show()
 
+    /// What launch does. Window modes show the window; the menu bar
+    /// presenter only puts up its status item.
+    func showAtLaunch()
+
     /// What the global hotkey does. Window modes bring the app forward;
     /// the menu bar presenter toggles its popover.
     func toggle()

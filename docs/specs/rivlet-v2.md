@@ -357,9 +357,9 @@ generated app against the 2.0 runtime and a 2.0 settings file against the
 
 - [x] T001 Settings model: mode, menu bar and floating options, hotkey, decode tests both directions
 - [x] T002 ModePresenter protocol, WindowPresenter, ModeCoordinator with live switch and distributed notification
-- [ ] T003 MenuBarPresenter: status item with site icon, popover hosting the web view, click toggle, right-click menu, Escape
-- [ ] T004 [P] Global hotkey registrar and recorder view with collision and no-modifier handling
-- [ ] T005 [P] Detach popover to the main window and reattach, state preserved
+- [x] T003 MenuBarPresenter: status item with site icon, popover hosting the web view, click toggle, right-click menu, Escape
+- [x] T004 [P] Global hotkey registrar and recorder view with collision and no-modifier handling
+- [x] T005 [P] Detach popover to the main window and reattach, state preserved
 - [ ] T006 [P] FloatingPresenter: floating level, all Spaces option, separate frame autosave
 - [ ] T007 Runtime Settings Mode pane with per-mode options and help text
 - [ ] T008 Maker: mode picker in New App sheet and app detail, seed on create, notify running app, Open behavior for menu bar apps

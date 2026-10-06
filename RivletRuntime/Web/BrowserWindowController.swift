@@ -103,6 +103,8 @@ final class BrowserWindowController: NSWindowController, NSWindowDelegate, NSToo
     func embedWebView() {
         guard !hostsWebView else { return }
         webView.removeFromSuperview()
+        webView.translatesAutoresizingMaskIntoConstraints = true
+        webView.autoresizingMask = [.width, .height]
         window?.contentView = webView
         findBar.webView = webView
     }

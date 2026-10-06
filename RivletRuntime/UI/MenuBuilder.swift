@@ -64,6 +64,9 @@ enum MenuBuilder {
         view.addItem(.separator())
         let fullScreen = view.addItem(withTitle: "Enter Full Screen", action: #selector(NSWindow.toggleFullScreen(_:)), keyEquivalent: "f")
         fullScreen.keyEquivalentModifierMask = [.command, .control]
+        view.addItem(.separator())
+        // Only shown in menu bar mode; the delegate validates it.
+        view.addItem(withTitle: "Open in Window", action: #selector(RuntimeAppDelegate.toggleMenuBarDetach(_:)), keyEquivalent: "")
         bar.addItem(withTitle: "View", action: nil, keyEquivalent: "").submenu = view
 
         let history = NSMenu(title: "History")

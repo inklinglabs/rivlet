@@ -41,15 +41,18 @@ final class ModeCoordinator {
             presenter.activate()
             return
         }
-        let wasVisible = presenter.map { _ in context.windows.main?.window?.isVisible ?? false } ?? false
+        let wasRunning = presenter != nil
         presenter?.deactivate()
         let next = make(wanted)
         presenter = next
         next.activate()
-        if wasVisible { next.show() }
+        // A switch into a window mode shows the window so the change is
+        // visible; a switch into menu bar mode leaves the popover closed.
+        if wasRunning, wanted != .menuBar { next.show() }
     }
 
     func show() { presenter?.show() }
+    func showAtLaunch() { presenter?.showAtLaunch() }
     func toggle() { presenter?.toggle() }
 
     private func make(_ mode: AppMode) -> ModePresenter {

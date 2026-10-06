@@ -37,6 +37,7 @@ final class FloatingPresenter: ModePresenter {
         NSApp.activate()
     }
 
+    func showAtLaunch() { show() }
     func toggle() { show() }
 
     func deactivate() {
