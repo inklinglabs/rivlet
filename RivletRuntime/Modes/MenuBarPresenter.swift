@@ -185,6 +185,15 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
 
     // MARK: Hotkey
 
+    /// Tries the combination for real and lets it go again, so the
+    /// Settings pane can refuse one another app already owns.
+    func canRegister(_ hotkey: Hotkey) -> Bool {
+        if hotkey == registeredHotkey { return true }
+        guard let token = try? HotkeyRegistrar.shared.register(hotkey, handler: {}) else { return false }
+        HotkeyRegistrar.shared.unregister(token)
+        return true
+    }
+
     private func applyHotkey(_ hotkey: Hotkey?) {
         guard hotkey != registeredHotkey else { return }
         if let hotkeyToken { HotkeyRegistrar.shared.unregister(hotkeyToken) }

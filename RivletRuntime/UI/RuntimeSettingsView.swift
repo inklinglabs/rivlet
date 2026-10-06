@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings for one generated app: General, Links, Scripts.
+/// Settings for one generated app: General, Mode, Links, Scripts.
 struct RuntimeSettingsView: View {
     let context: RuntimeContext
 
@@ -8,6 +8,8 @@ struct RuntimeSettingsView: View {
         TabView {
             GeneralSettingsPane(context: context)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            ModeSettingsPane(context: context)
+                .tabItem { Label("Mode", systemImage: "macwindow") }
             LinksSettingsPane(context: context)
                 .tabItem { Label("Links", systemImage: "link") }
             ScriptsSettingsPane(context: context)
