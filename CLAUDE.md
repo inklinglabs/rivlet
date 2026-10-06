@@ -50,6 +50,11 @@ it for colors, typography, window layout, and settings. Bundle ID:
   `RivletRuntimeTests/` (Swift Testing).
 - The v1 design, including the stub-plus-shared-framework model and the
   bundle anatomy, lives in [docs/specs/rivlet-v1.md](docs/specs/rivlet-v1.md).
+- Modes (window, menu bar popover, floating) are `RivletRuntime/Modes/`:
+  one `ModePresenter` per mode, swapped live by `ModeCoordinator`. The
+  mode lives in `settings.json`, never in the bundle; the maker tells a
+  running app about changes with the `settingsChanged` distributed
+  notification. Design in [docs/specs/rivlet-v2.md](docs/specs/rivlet-v2.md).
 - Updates: Sparkle 2 via SPM in the maker only, feed on GitHub Releases,
   following Palilogy's `Updates/` pattern.
 - Free and MIT. No licensing code.

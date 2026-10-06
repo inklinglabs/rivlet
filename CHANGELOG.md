@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 (unreleased)
+
+- New: every app has a mode. Window is what you had. Menu bar puts the
+  app in the menu bar with the page in a popover, with a global keyboard
+  shortcut, an optional hidden Dock icon, and Open in Window when you
+  want a real window for a while. Floating keeps the window above
+  everything else and can follow you across Spaces. Pick the mode when
+  you make the app or change it later, in Rivlet or in the app's own
+  Settings. Changes take effect while the app runs; nothing is rebuilt.
+- Fixed: opening an app no longer rewrites its settings file when nothing
+  changed.
+
 ## 1.0.2 (2026-10-05)
 
 - Fixed: switching away from Rivlet and back no longer loses the app you

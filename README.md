@@ -19,7 +19,7 @@ Rivlet.app. One Rivlet update updates every app the next time it opens.
 If you delete Rivlet, the apps show a short message pointing you back to
 the download.
 
-Editable state (link rules, userscripts, custom CSS) lives in
+Editable state (mode, link rules, userscripts, custom CSS) lives in
 `~/Library/Application Support/Rivlet/Apps/<bundle id>/`. Logins and site
 data live where WebKit keeps them for any app, under `~/Library/WebKit/`.
 
@@ -40,6 +40,10 @@ data live where WebKit keeps them for any app, under `~/Library/WebKit/`.
   `@include` headers.
 - Downloads to your Downloads folder, camera and microphone prompts,
   find in page, zoom, print, full screen, and a toolbar you can hide.
+- Shows each app the way you want it: as a normal window, in the menu bar
+  as a popover with a global keyboard shortcut and no Dock icon, or as a
+  floating window that stays above your other windows and can follow you
+  across Spaces. Change the mode any time, even while the app runs.
 
 ## What it does not do
 
@@ -67,7 +71,9 @@ xcodebuild -project Rivlet.xcodeproj -scheme Rivlet test
 ```
 
 The design and acceptance criteria are in
-[docs/specs/rivlet-v1.md](docs/specs/rivlet-v1.md). Releases follow
+[docs/specs/rivlet-v1.md](docs/specs/rivlet-v1.md) and, for the menu bar
+and floating modes, [docs/specs/rivlet-v2.md](docs/specs/rivlet-v2.md).
+Releases follow
 [docs/RELEASING.md](docs/RELEASING.md). Work happens on `dev`; `main` only
 moves at release time.
 
