@@ -1,0 +1,57 @@
+# Temporary probe: which hdiutil invocations produce a valid DMG on the
+# current macos-latest image. Run by hand, delete once the release
+# workflow is fixed.
+name: DMG probe
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: macos-latest
+    steps:
+      - name: Image info
+        run: |
+          sw_vers
+          xcode-select -p
+          hdiutil help 2>&1 | head -3 || true
+      - name: Try variants
+        run: |
+          STAGING=$(mktemp -d)
+          mkdir -p "$STAGING/Dummy.app/Contents/MacOS"
+          cp /bin/ls "$STAGING/Dummy.app/Contents/MacOS/Dummy"
+          ln -s /Applications "$STAGING/Applications"
+          mkdir out
+          try() {
+            name=$1; shift
+            echo "=== $name: $*"
+            if "$@" 2>&1 | tail -3; then
+              f=$(ls -t out/*.dmg 2>/dev/null | head -1)
+              echo "size: $(stat -f %z "$f")"
+              file "$f"
+              if hdiutil imageinfo "$f" >/dev/null 2>&1; then echo "RESULT $name: VALID"; else echo "RESULT $name: CORRUPT"; fi
+              tail -c 512 "$f" | head -c 4 | xxd | head -1
+            else
+              echo "RESULT $name: CREATE FAILED"
+            fi
+          }
+          try hfs-udzo   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDZO out/hfs-udzo.dmg
+          try apfs-udzo  hdiutil create -volname Dummy -srcfolder "$STAGING" -fs APFS -format UDZO out/apfs-udzo.dmg
+          try hfs-ulfo   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format ULFO out/hfs-ulfo.dmg
+          try hfs-udbz   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDBZ out/hfs-udbz.dmg
+          try hfs-udro   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDRO out/hfs-udro.dmg
+          try default    hdiutil create -volname Dummy -srcfolder "$STAGING" out/default.dmg
+          echo "=== udrw then convert"
+          hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDRW out/rw.dmg | tail -1
+          hdiutil convert out/rw.dmg -format UDZO -o out/converted.dmg | tail -1
+          if hdiutil imageinfo out/converted.dmg >/dev/null 2>&1; then echo "RESULT convert: VALID"; else echo "RESULT convert: CORRUPT"; fi
+          echo "=== diskutil image create"
+          diskutil image create blank --help 2>&1 | head -5 || true
+          echo "=== attach test on hfs-udzo"
+          hdiutil attach out/hfs-udzo.dmg -nobrowse -readonly -mountpoint /tmp/m 2>&1 | tail -2 || true
+          ls /tmp/m 2>&1 || true
+          hdiutil detach /tmp/m 2>/dev/null || true
+          echo "=== SUMMARY"; grep -h RESULT /dev/null; true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dmg-probe
+          path: out/*.dmg
