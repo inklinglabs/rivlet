@@ -1,9 +1,11 @@
+import RivletRuntime
 import SwiftUI
 
 struct AppDetailView: View {
     @Environment(AppState.self) private var state
     let app: GeneratedApp
     @State private var confirmTrash = false
+    @State private var mode: AppMode = .window
 
     var body: some View {
         ScrollView {
@@ -28,6 +30,16 @@ struct AppDetailView: View {
                 Divider()
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                     GridRow {
+                        Text("Mode").foregroundStyle(.secondary)
+                        Picker("Mode", selection: $mode) {
+                            ForEach(AppMode.allCases) { mode in Text(mode.title).tag(mode) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(maxWidth: 320)
+                        .onChange(of: mode) { _, value in state.setMode(value, for: app) }
+                    }
+                    GridRow {
                         Text("Location").foregroundStyle(.secondary)
                         Text(app.bundleURL.deletingLastPathComponent().path(percentEncoded: false))
                             .textSelection(.enabled)
@@ -46,13 +58,15 @@ struct AppDetailView: View {
                     }
                 }
                 .font(.callout)
-                Text("Logins, cookies, and site data for this app stay separate from Safari and from every other Rivlet app. Scripts, custom CSS, and link rules are in the app\u{2019}s own Settings.")
+                Text("Logins, cookies, and site data for this app stay separate from Safari and from every other Rivlet app. Scripts, custom CSS, link rules, and the menu bar shortcut are in the app\u{2019}s own Settings. Changing the mode takes effect right away, even while the app runs.")
                     .font(.caption).foregroundStyle(.secondary)
                     .frame(maxWidth: 640, alignment: .leading)
             }
             .padding(28)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .onAppear { mode = state.mode(of: app) }
+        .onChange(of: app.id) { _, _ in mode = state.mode(of: app) }
         .confirmationDialog("Move \(app.name) to the Trash?", isPresented: $confirmTrash, titleVisibility: .visible) {
             Button("Move to Trash", role: .destructive) {
                 Task { await state.trash(app) }

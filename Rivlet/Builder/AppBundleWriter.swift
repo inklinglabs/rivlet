@@ -6,6 +6,7 @@ struct AppBundleRequest: Sendable {
     var url: URL
     var iconPNG: Data?
     var destinationDirectory: URL
+    var mode: AppMode = .window
 }
 
 enum AppBundleError: LocalizedError {
@@ -62,6 +63,7 @@ enum AppBundleWriter {
         await MainActor.run {
             let store = SettingsStore(bundleIdentifier: bundleIdentifier)
             store.settings.allowedHosts = NavigationPolicy.seededAllowedHosts(for: request.url)
+            store.settings.mode = request.mode
             store.save()
         }
         return GeneratedApp(id: UUID(), name: request.name, url: request.url, bundleIdentifier: bundleIdentifier, bundlePath: destination.path, createdAt: Date())

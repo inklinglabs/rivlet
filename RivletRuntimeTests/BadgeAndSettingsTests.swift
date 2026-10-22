@@ -20,6 +20,15 @@ import Testing
         #expect(settings.badgeFromTitle == true)
         #expect(settings.allowedHosts.isEmpty)
         #expect(settings.userAgent == nil)
+        #expect(settings.downloadFolder == nil)
+        #expect(settings.askWhereToSaveDownloads == false)
+    }
+
+    @Test func decodesDownloadKeys() throws {
+        let data = Data("{\"downloadFolder\": \"/tmp/exports\", \"askWhereToSaveDownloads\": true}".utf8)
+        let settings = try JSONDecoder().decode(AppSettings.self, from: data)
+        #expect(settings.downloadFolder == "/tmp/exports")
+        #expect(settings.askWhereToSaveDownloads == true)
     }
 
     @Test @MainActor func storeRoundTrips() throws {
@@ -32,6 +41,19 @@ import Testing
         #expect(again.settings.allowedHosts == ["a.com"])
         #expect(again.userScriptFiles().count == 1)
         #expect(again.userCSS() == "body{}")
+        try? FileManager.default.removeItem(at: dir)
+    }
+}
+
+@Suite struct DownloadFolderTests {
+    @Test func resolvesChosenFolderOrFallsBack() throws {
+        let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+        let dir = FileManager.default.temporaryDirectory.appending(path: "rivlet-folder-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        #expect(DownloadManager.resolveFolder(nil) == downloads)
+        #expect(DownloadManager.resolveFolder("") == downloads)
+        #expect(DownloadManager.resolveFolder(dir.path).standardizedFileURL == dir.standardizedFileURL)
+        #expect(DownloadManager.resolveFolder(dir.appending(path: "gone").path) == downloads)
         try? FileManager.default.removeItem(at: dir)
     }
 }

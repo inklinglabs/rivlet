@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Settings for one generated app: General, Links, Scripts.
+/// Settings for one generated app: General, Mode, Links, Scripts.
 struct RuntimeSettingsView: View {
     let context: RuntimeContext
 
@@ -8,6 +8,8 @@ struct RuntimeSettingsView: View {
         TabView {
             GeneralSettingsPane(context: context)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            ModeSettingsPane(context: context)
+                .tabItem { Label("Mode", systemImage: "macwindow") }
             LinksSettingsPane(context: context)
                 .tabItem { Label("Links", systemImage: "link") }
             ScriptsSettingsPane(context: context)
@@ -52,6 +54,25 @@ private struct GeneralSettingsPane: View {
                 Text("The site still has to ask for permission. Focus modes hide banners the same way they do for any app.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Downloads") {
+                Picker("Downloads", selection: $store.settings.askWhereToSaveDownloads) {
+                    Text("Save to folder").tag(false)
+                    Text("Ask where to save each file").tag(true)
+                }
+                .pickerStyle(.radioGroup)
+                .labelsHidden()
+                HStack {
+                    Text(downloadFolderLabel)
+                        .foregroundStyle(store.settings.askWhereToSaveDownloads ? .tertiary : .secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer()
+                    Button("Choose\u{2026}", action: chooseDownloadFolder)
+                        .disabled(store.settings.askWhereToSaveDownloads)
+                }
+                Text("Applies to the next download.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Browser identity") {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Custom user agent")
@@ -71,6 +92,24 @@ private struct GeneralSettingsPane: View {
         }
         .formStyle(.grouped)
         .onAppear { userAgent = context.store.settings.userAgent ?? "" }
+    }
+
+    private var downloadFolderLabel: String {
+        guard let folder = context.store.settings.downloadFolder else { return "Downloads" }
+        return (folder as NSString).abbreviatingWithTildeInPath
+    }
+
+    private func chooseDownloadFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose"
+        panel.directoryURL = DownloadManager.resolveFolder(context.store.settings.downloadFolder)
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let systemDownloads = DownloadManager.systemDownloads.standardizedFileURL
+        context.store.settings.downloadFolder = url.standardizedFileURL == systemDownloads ? nil : url.path
     }
 
     private func saveUserAgent() {

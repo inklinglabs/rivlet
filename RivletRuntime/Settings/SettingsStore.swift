@@ -10,8 +10,11 @@ public final class SettingsStore {
     public let bundleIdentifier: String
     public let directory: URL
     public var settings: AppSettings {
-        didSet { if settings != oldValue { save() } }
+        didSet { if !isLoading, settings != oldValue { save() } }
     }
+    /// Set while `load()` assigns, so reading a file never rewrites it. A
+    /// 1.0 file stays byte for byte as it was until a setting changes.
+    private var isLoading = false
 
     public var settingsFile: URL { directory.appending(path: "settings.json") }
     public var userScriptsDirectory: URL { directory.appending(path: "userscripts", directoryHint: .isDirectory) }
@@ -28,7 +31,9 @@ public final class SettingsStore {
         guard let data = try? Data(contentsOf: settingsFile),
               let decoded = try? JSONDecoder().decode(AppSettings.self, from: data)
         else { return }
+        isLoading = true
         settings = decoded
+        isLoading = false
     }
 
     public func save() {

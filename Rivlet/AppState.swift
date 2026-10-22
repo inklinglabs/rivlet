@@ -37,6 +37,25 @@ final class AppState {
         open(app, arguments: ["--settings"])
     }
 
+    /// The mode stored in the app's own settings file.
+    func mode(of app: GeneratedApp) -> AppMode {
+        SettingsStore(bundleIdentifier: app.bundleIdentifier).settings.mode
+    }
+
+    /// Writes the mode to the app's settings file and tells the app, if it
+    /// is running, to pick it up. The bundle is never touched.
+    func setMode(_ mode: AppMode, for app: GeneratedApp) {
+        let store = SettingsStore(bundleIdentifier: app.bundleIdentifier)
+        guard store.settings.mode != mode else { return }
+        store.settings.mode = mode
+        DistributedNotificationCenter.default().postNotificationName(
+            RivletPaths.settingsChangedNotification,
+            object: app.bundleIdentifier,
+            userInfo: nil,
+            deliverImmediately: true
+        )
+    }
+
     func reveal(_ app: GeneratedApp) {
         NSWorkspace.shared.activateFileViewerSelecting([app.bundleURL])
     }
