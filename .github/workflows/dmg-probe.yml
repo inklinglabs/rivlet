@@ -19,6 +19,14 @@ jobs:
           STAGING=$(mktemp -d)
           mkdir -p "$STAGING/Dummy.app/Contents/MacOS"
           cp /bin/ls "$STAGING/Dummy.app/Contents/MacOS/Dummy"
+          # Realistic payload: ~6 MB incompressible plus ~6 MB compressible,
+          # spread over many files, since a tiny image came out fine.
+          mkdir -p "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/A"
+          ln -s A "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/Current"
+          for i in $(seq 1 12); do head -c 524288 /dev/urandom > "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/A/rand$i"; done
+          for i in $(seq 1 12); do yes "compressible line of text $i" | head -c 524288 > "$STAGING/Dummy.app/Contents/Resources_text$i"; done
+          cp -R /usr/share/zoneinfo "$STAGING/Dummy.app/Contents/zoneinfo"
+          du -sh "$STAGING"
           ln -s /Applications "$STAGING/Applications"
           mkdir out
           try() {
@@ -50,7 +58,6 @@ jobs:
           hdiutil attach out/hfs-udzo.dmg -nobrowse -readonly -mountpoint /tmp/m 2>&1 | tail -2 || true
           ls /tmp/m 2>&1 || true
           hdiutil detach /tmp/m 2>/dev/null || true
-          echo "=== SUMMARY"; grep -h RESULT /dev/null; true
       - uses: actions/upload-artifact@v4
         with:
           name: dmg-probe
