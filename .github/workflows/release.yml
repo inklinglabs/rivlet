@@ -127,6 +127,10 @@ jobs:
             -fs HFS+ \
             -format UDZO \
             "Rivlet-${{ steps.version.outputs.version }}.dmg"
+          # Printed so a notarization rejection can be traced to the image
+          # hdiutil actually wrote on this runner image.
+          file "Rivlet-${{ steps.version.outputs.version }}.dmg"
+          hdiutil imageinfo "Rivlet-${{ steps.version.outputs.version }}.dmg" | head -20
 
       - name: Notarize and staple
         env:
@@ -136,7 +140,11 @@ jobs:
         run: |
           echo "$ASC_API_KEY" | base64 --decode > $RUNNER_TEMP/AuthKey.p8
           KEY_ARGS=(--key $RUNNER_TEMP/AuthKey.p8 --key-id "$ASC_API_KEY_ID" --issuer "$ASC_API_ISSUER_ID")
-          xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" \
+          # --force skips notarytool's local file-type check, which rejects
+          # DMGs from newer runner images that Apple's service accepts. The
+          # service still validates the submission and the status check
+          # below fails the job if it is not Accepted.
+          xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" --force \
             "${KEY_ARGS[@]}" --wait --output-format json > $RUNNER_TEMP/notary.json || true
           cat $RUNNER_TEMP/notary.json
           SUBMISSION_ID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['id'])" $RUNNER_TEMP/notary.json)
@@ -150,6 +158,14 @@ jobs:
           xcrun stapler staple "Rivlet-${{ steps.version.outputs.version }}.dmg"
           xcrun stapler validate "Rivlet-${{ steps.version.outputs.version }}.dmg"
           rm $RUNNER_TEMP/AuthKey.p8
+
+      - name: Keep the DMG when notarization fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rivlet-${{ steps.version.outputs.version }}-unnotarized
+          path: Rivlet-${{ steps.version.outputs.version }}.dmg
+          if-no-files-found: ignore
 
       - name: Generate Sparkle appcast
         env:
