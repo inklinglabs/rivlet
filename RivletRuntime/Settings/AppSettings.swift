@@ -17,6 +17,11 @@ public struct AppSettings: Codable, Sendable, Equatable {
     public var mode: AppMode = .window
     public var menuBar = MenuBarOptions()
     public var floating = FloatingOptions()
+    /// Where downloads land. nil means ~/Downloads. Added in 1.1; older
+    /// runtimes ignore it.
+    public var downloadFolder: String?
+    /// Ask for folder and filename on every download. Added in 1.1.
+    public var askWhereToSaveDownloads = false
 
     public init() {}
 
@@ -24,6 +29,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         case showToolbar, badgeFromTitle, badgeFromAPI, notificationsEnabled
         case keepRunningWhenWindowCloses, allowedHosts, userAgent, zoom
         case mode, menuBar, floating
+        case downloadFolder, askWhereToSaveDownloads
     }
 
     public init(from decoder: Decoder) throws {
@@ -42,5 +48,7 @@ public struct AppSettings: Codable, Sendable, Equatable {
         mode = (try? c.decodeIfPresent(String.self, forKey: .mode)).flatMap { $0 }.flatMap(AppMode.init(rawValue:)) ?? d.mode
         menuBar = try c.decodeIfPresent(MenuBarOptions.self, forKey: .menuBar) ?? d.menuBar
         floating = try c.decodeIfPresent(FloatingOptions.self, forKey: .floating) ?? d.floating
+        downloadFolder = try c.decodeIfPresent(String.self, forKey: .downloadFolder)
+        askWhereToSaveDownloads = try c.decodeIfPresent(Bool.self, forKey: .askWhereToSaveDownloads) ?? d.askWhereToSaveDownloads
     }
 }

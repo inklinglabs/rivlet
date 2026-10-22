@@ -9,6 +9,9 @@
   everything else and can follow you across Spaces. Pick the mode when
   you make the app or change it later, in Rivlet or in the app's own
   Settings. Changes take effect while the app runs; nothing is rebuilt.
+- New: each app can save downloads to a folder you pick, or ask where to
+  put every file. Set it in the app's Settings under General. Downloads
+  still go to your Downloads folder unless you change it.
 - Fixed: opening an app no longer rewrites its settings file when nothing
   changed.
 

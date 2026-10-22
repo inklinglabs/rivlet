@@ -21,7 +21,7 @@ final class RuntimeContext {
         self.store = SettingsStore(bundleIdentifier: identity.bundleIdentifier)
         self.notifications = NotificationBridge()
         self.badge = BadgeController()
-        self.downloads = DownloadManager()
+        self.downloads = DownloadManager(store: store)
         self.windows = WindowManager(context: self)
         self.modes = ModeCoordinator(context: self)
     }

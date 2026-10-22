@@ -38,8 +38,9 @@ data live where WebKit keeps them for any app, under `~/Library/WebKit/`.
   app's own name. Clicking one brings the app forward.
 - Runs your userscripts and custom CSS per app, with Greasemonkey style
   `@include` headers.
-- Downloads to your Downloads folder, camera and microphone prompts,
-  find in page, zoom, print, full screen, and a toolbar you can hide.
+- Downloads to your Downloads folder, a folder you pick, or wherever you
+  say each time. Camera and microphone prompts, find in page, zoom,
+  print, full screen, and a toolbar you can hide.
 - Shows each app the way you want it: as a normal window, in the menu bar
   as a popover with a global keyboard shortcut and no Dock icon, or as a
   floating window that stays above your other windows and can follow you
