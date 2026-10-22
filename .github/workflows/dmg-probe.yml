@@ -14,7 +14,9 @@ jobs:
       - name: Image info
         run: sw_vers
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: |
+          brew install xcodegen
+          xcodegen generate
       - name: Build unsigned
         run: |
           xcodebuild -project Rivlet.xcodeproj -scheme Rivlet -configuration Release \
