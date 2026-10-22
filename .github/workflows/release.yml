@@ -121,16 +121,28 @@ jobs:
           STAGING=$(mktemp -d)
           cp -R build/Build/Products/Release/Rivlet.app "$STAGING/"
           ln -s /Applications "$STAGING/Applications"
-          hdiutil create \
-            -volname "Rivlet ${{ steps.version.outputs.version }}" \
-            -srcfolder "$STAGING" \
-            -fs HFS+ \
-            -format UDZO \
-            "Rivlet-${{ steps.version.outputs.version }}.dmg"
-          # Printed so a notarization rejection can be traced to the image
-          # hdiutil actually wrote on this runner image.
-          file "Rivlet-${{ steps.version.outputs.version }}.dmg"
-          hdiutil imageinfo "Rivlet-${{ steps.version.outputs.version }}.dmg" | head -20
+          DMG="Rivlet-${{ steps.version.outputs.version }}.dmg"
+          # hdiutil on the macos-26 runner image (20261013 and later)
+          # sometimes writes a UDZO image whose block map does not match
+          # the bytes on disk. It is nondeterministic: the same command
+          # on the same input passes on a retry. So verify, and retry.
+          for attempt in 1 2 3 4 5; do
+            rm -f "$DMG"
+            hdiutil create \
+              -volname "Rivlet ${{ steps.version.outputs.version }}" \
+              -srcfolder "$STAGING" \
+              -fs HFS+ \
+              -format UDZO \
+              "$DMG"
+            if hdiutil verify "$DMG" >/dev/null 2>&1 && hdiutil imageinfo "$DMG" >/dev/null 2>&1; then
+              echo "DMG verified on attempt $attempt"
+              break
+            fi
+            echo "DMG failed verification on attempt $attempt" >&2
+            if [ "$attempt" = 5 ]; then exit 1; fi
+          done
+          file "$DMG"
+          hdiutil imageinfo "$DMG" | head -20
 
       - name: Notarize and staple
         env:
@@ -140,11 +152,7 @@ jobs:
         run: |
           echo "$ASC_API_KEY" | base64 --decode > $RUNNER_TEMP/AuthKey.p8
           KEY_ARGS=(--key $RUNNER_TEMP/AuthKey.p8 --key-id "$ASC_API_KEY_ID" --issuer "$ASC_API_ISSUER_ID")
-          # --force skips notarytool's local file-type check, which rejects
-          # DMGs from newer runner images that Apple's service accepts. The
-          # service still validates the submission and the status check
-          # below fails the job if it is not Accepted.
-          xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" --force \
+          xcrun notarytool submit "Rivlet-${{ steps.version.outputs.version }}.dmg" \
             "${KEY_ARGS[@]}" --wait --output-format json > $RUNNER_TEMP/notary.json || true
           cat $RUNNER_TEMP/notary.json
           SUBMISSION_ID=$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['id'])" $RUNNER_TEMP/notary.json)
