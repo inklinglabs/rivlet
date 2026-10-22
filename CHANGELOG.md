@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.0 (unreleased)
+## 1.1.0 (2026-10-21)
 
 - New: every app has a mode. Window is what you had. Menu bar puts the
   app in the menu bar with the page in a popover, with a global keyboard
