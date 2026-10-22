@@ -1,6 +1,7 @@
-# Temporary probe: which hdiutil invocations produce a valid DMG on the
-# current macos-latest image. Run by hand, delete once the release
-# workflow is fixed.
+# Temporary probe: build the real app unsigned and package it the way the
+# release workflow does, several ways, to find which hdiutil path writes
+# a valid DMG on the current macos-latest image. Run by hand; delete once
+# the release workflow is fixed.
 name: DMG probe
 on:
   workflow_dispatch:
@@ -9,56 +10,54 @@ jobs:
   probe:
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Image info
+        run: sw_vers
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Build unsigned
         run: |
-          sw_vers
-          xcode-select -p
-          hdiutil help 2>&1 | head -3 || true
+          xcodebuild -project Rivlet.xcodeproj -scheme Rivlet -configuration Release \
+            -derivedDataPath build build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY="" 2>&1 | tail -3
+          du -sh build/Build/Products/Release/Rivlet.app
       - name: Try variants
         run: |
           STAGING=$(mktemp -d)
-          mkdir -p "$STAGING/Dummy.app/Contents/MacOS"
-          cp /bin/ls "$STAGING/Dummy.app/Contents/MacOS/Dummy"
-          # Realistic payload: ~6 MB incompressible plus ~6 MB compressible,
-          # spread over many files, since a tiny image came out fine.
-          mkdir -p "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/A"
-          ln -s A "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/Current"
-          for i in $(seq 1 12); do head -c 524288 /dev/urandom > "$STAGING/Dummy.app/Contents/Frameworks/Blob.framework/Versions/A/rand$i"; done
-          for i in $(seq 1 12); do yes "compressible line of text $i" | head -c 524288 > "$STAGING/Dummy.app/Contents/Resources_text$i"; done
-          cp -R /usr/share/zoneinfo "$STAGING/Dummy.app/Contents/zoneinfo"
-          du -sh "$STAGING"
+          cp -R build/Build/Products/Release/Rivlet.app "$STAGING/"
           ln -s /Applications "$STAGING/Applications"
+          ls -la@ "$STAGING" "$STAGING/Rivlet.app/Contents" | head -30
           mkdir out
-          try() {
-            name=$1; shift
-            echo "=== $name: $*"
-            if "$@" 2>&1 | tail -3; then
-              f=$(ls -t out/*.dmg 2>/dev/null | head -1)
-              echo "size: $(stat -f %z "$f")"
-              file "$f"
-              if hdiutil imageinfo "$f" >/dev/null 2>&1; then echo "RESULT $name: VALID"; else echo "RESULT $name: CORRUPT"; fi
-              tail -c 512 "$f" | head -c 4 | xxd | head -1
-            else
-              echo "RESULT $name: CREATE FAILED"
-            fi
+          check() {
+            f=$1
+            echo "size: $(stat -f %z "$f")"
+            if hdiutil imageinfo "$f" >/dev/null 2>&1; then echo "RESULT $f: VALID"; else echo "RESULT $f: CORRUPT"; fi
           }
-          try hfs-udzo   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDZO out/hfs-udzo.dmg
-          try apfs-udzo  hdiutil create -volname Dummy -srcfolder "$STAGING" -fs APFS -format UDZO out/apfs-udzo.dmg
-          try hfs-ulfo   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format ULFO out/hfs-ulfo.dmg
-          try hfs-udbz   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDBZ out/hfs-udbz.dmg
-          try hfs-udro   hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDRO out/hfs-udro.dmg
-          try default    hdiutil create -volname Dummy -srcfolder "$STAGING" out/default.dmg
+          for i in 1 2 3; do
+            echo "=== udzo-hfs attempt $i"
+            hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs HFS+ -format UDZO "out/udzo-hfs-$i.dmg" | tail -1
+            check "out/udzo-hfs-$i.dmg"
+          done
+          echo "=== udzo-apfs"
+          hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs APFS -format UDZO out/udzo-apfs.dmg | tail -1
+          check out/udzo-apfs.dmg
+          echo "=== ulfo-hfs"
+          hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs HFS+ -format ULFO out/ulfo-hfs.dmg | tail -1
+          check out/ulfo-hfs.dmg
           echo "=== udrw then convert"
-          hdiutil create -volname Dummy -srcfolder "$STAGING" -fs HFS+ -format UDRW out/rw.dmg | tail -1
+          hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs HFS+ -format UDRW out/rw.dmg | tail -1
+          check out/rw.dmg
           hdiutil convert out/rw.dmg -format UDZO -o out/converted.dmg | tail -1
-          if hdiutil imageinfo out/converted.dmg >/dev/null 2>&1; then echo "RESULT convert: VALID"; else echo "RESULT convert: CORRUPT"; fi
-          echo "=== diskutil image create"
-          diskutil image create blank --help 2>&1 | head -5 || true
-          echo "=== attach test on hfs-udzo"
-          hdiutil attach out/hfs-udzo.dmg -nobrowse -readonly -mountpoint /tmp/m 2>&1 | tail -2 || true
-          ls /tmp/m 2>&1 || true
-          hdiutil detach /tmp/m 2>/dev/null || true
+          check out/converted.dmg
+          echo "=== udzo-hfs without the Applications symlink"
+          rm "$STAGING/Applications"
+          hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs HFS+ -format UDZO out/udzo-nolink.dmg | tail -1
+          check out/udzo-nolink.dmg
+          echo "=== udzo-hfs with xattrs stripped"
+          xattr -cr "$STAGING"
+          hdiutil create -volname "Rivlet 1.1.0" -srcfolder "$STAGING" -fs HFS+ -format UDZO out/udzo-noxattr.dmg | tail -1
+          check out/udzo-noxattr.dmg
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: dmg-probe
           path: out/*.dmg
