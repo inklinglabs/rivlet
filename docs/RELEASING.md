@@ -52,9 +52,11 @@ workflow fails at its first step if the secret is missing.
 ## Each release
 
 1. On `dev`: bump `CFBundleShortVersionString` in `Rivlet/Info.plist` and
-   add a `CHANGELOG.md` entry. Leave `CFBundleVersion` alone; the workflow
-   sets it from the tag, because Sparkle compares that value, not the
-   marketing version.
+   add a `CHANGELOG.md` entry under a `## <version> (<YYYY-MM-DD>)` heading.
+   https://inkling-labs.com/changelog/rivlet reads `CHANGELOG.md` from
+   `main` within five minutes of the merge, and skips any heading without
+   a date. Leave `CFBundleVersion` alone; the workflow sets it from the
+   tag, because Sparkle compares that value, not the marketing version.
 2. Open the dev-to-main PR and merge it.
 3. Tag from `main`. The guard refuses to tag if the merge did not land:
 
