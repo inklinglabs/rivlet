@@ -20,8 +20,9 @@ protocol ModePresenter: AnyObject {
     /// presenter only puts up its status item.
     func showAtLaunch()
 
-    /// What the global hotkey does. Window modes bring the app forward;
-    /// the menu bar presenter toggles its popover.
+    /// What the global hotkey does. Window modes bring the app forward, or
+    /// hide it when it is already in front; the menu bar presenter toggles
+    /// its popover.
     func toggle()
 
     /// Gives the main window back in a neutral state so the next presenter
@@ -38,5 +39,15 @@ enum WindowPresentation {
         window.hidesOnDeactivate = false
         window.collectionBehavior.remove([.canJoinAllSpaces, .fullScreenAuxiliary])
         window.collectionBehavior.insert(.fullScreenPrimary)
+    }
+
+    /// The shortcut in a window mode: hide the app when it is in front
+    /// with its window showing, otherwise bring it forward.
+    static func toggle(_ presenter: ModePresenter, window: NSWindow?) {
+        if NSApp.isActive, let window, window.isVisible, !window.isMiniaturized {
+            NSApp.hide(nil)
+        } else {
+            presenter.show()
+        }
     }
 }

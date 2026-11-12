@@ -4,6 +4,7 @@ import SwiftUI
 struct ModeSettingsPane: View {
     let context: RuntimeContext
     @State private var hotkeyMessage: String?
+    @State private var bakeMessage: String?
     @State private var width = ""
     @State private var height = ""
 
@@ -18,27 +19,35 @@ struct ModeSettingsPane: View {
                 .onChange(of: store.settings.mode) { _, _ in context.modes.apply() }
                 Text(modeHelp).font(.caption).foregroundStyle(.secondary)
             }
+            Section("Keyboard shortcut") {
+                HStack(spacing: 12) {
+                    Text("Shortcut")
+                    Spacer()
+                    HotkeyRecorder(hotkey: store.settings.hotkey, onAttempt: handle(attempt:))
+                        .frame(width: 160, height: 24)
+                    Button("Clear") {
+                        store.settings.hotkey = nil
+                        hotkeyMessage = nil
+                        context.modes.apply()
+                    }
+                    .disabled(store.settings.hotkey == nil)
+                }
+                Text(hotkeyMessage ?? "\(hotkeyHelp) Click the box and press a combination with Command, Option, Control, or Shift.")
+                    .font(.caption).foregroundStyle(hotkeyMessage == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+            }
             switch store.settings.mode {
             case .menuBar:
                 Section("Menu bar") {
                     Toggle("Hide the Dock icon", isOn: $store.settings.menuBar.hideDockIcon)
                         .onChange(of: store.settings.menuBar.hideDockIcon) { _, _ in context.modes.apply() }
-                    Text("The app lives in the menu bar only. It still shows for a moment in the Dock while it launches.")
-                        .font(.caption).foregroundStyle(.secondary)
-                    HStack(spacing: 12) {
-                        Text("Keyboard shortcut")
-                        Spacer()
-                        HotkeyRecorder(hotkey: store.settings.menuBar.hotkey, onAttempt: handle(attempt:))
-                            .frame(width: 160, height: 24)
-                        Button("Clear") {
-                            store.settings.menuBar.hotkey = nil
-                            hotkeyMessage = nil
+                    Toggle("Skip the Dock at launch too", isOn: $store.settings.menuBar.bakeDockIcon)
+                        .disabled(!store.settings.menuBar.hideDockIcon)
+                        .onChange(of: store.settings.menuBar.bakeDockIcon) { _, _ in
                             context.modes.apply()
+                            bakeMessage = context.modes.bakeFailure
                         }
-                        .disabled(store.settings.menuBar.hotkey == nil)
-                    }
-                    Text(hotkeyMessage ?? "Opens and closes the popover from any app. Click the box and press a combination with Command, Option, Control, or Shift.")
-                        .font(.caption).foregroundStyle(hotkeyMessage == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
+                    Text(bakeMessage ?? "With the Dock icon hidden, the app still shows in the Dock for a moment while it launches. Skipping that changes the app itself and signs it again on this Mac, and takes effect the next time the app opens.")
+                        .font(.caption).foregroundStyle(bakeMessage == nil ? AnyShapeStyle(.secondary) : AnyShapeStyle(.red))
                     HStack(spacing: 12) {
                         Text("Popover size")
                         Spacer()
@@ -47,7 +56,7 @@ struct ModeSettingsPane: View {
                         TextField("Height", text: $height).frame(width: 64).multilineTextAlignment(.trailing)
                         Button("Apply", action: applySize).disabled(!sizeChanged)
                     }
-                    Text("Points, at least \(Int(PopoverSize.minimum.width)) by \(Int(PopoverSize.minimum.height)). Sign-in windows the site opens appear as normal windows and close the popover; open it again when you are done.")
+                    Text("Points, at least \(Int(PopoverSize.minimum.width)) by \(Int(PopoverSize.minimum.height)). You can also drag a bottom corner of the popover. Sign-in windows the site opens appear as normal windows and close the popover; open it again when you are done.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             case .floating:
@@ -74,6 +83,13 @@ struct ModeSettingsPane: View {
         }
     }
 
+    private var hotkeyHelp: String {
+        switch context.store.settings.mode {
+        case .menuBar: return "Opens and closes the popover from any app."
+        case .window, .floating: return "Brings this app to the front from any app, and hides it when it is already in front."
+        }
+    }
+
     private func handle(attempt: HotkeyRecorderControl.Attempt) {
         switch attempt {
         case .noModifier:
@@ -81,12 +97,12 @@ struct ModeSettingsPane: View {
         case .reserved(let hotkey):
             hotkeyMessage = "\(HotkeyFormatter.string(for: hotkey)) belongs to macOS"
         case .recorded(let hotkey):
-            if let presenter = context.modes.presenter as? MenuBarPresenter, !presenter.canRegister(hotkey) {
+            if !context.modes.canRegister(hotkey) {
                 hotkeyMessage = "Already used by another app"
                 return
             }
             hotkeyMessage = nil
-            context.store.settings.menuBar.hotkey = hotkey
+            context.store.settings.hotkey = hotkey
             context.modes.apply()
         }
     }

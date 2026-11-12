@@ -25,6 +25,19 @@ public struct AppSettings: Codable, Sendable, Equatable {
 
     public init() {}
 
+    /// The app's global shortcut: toggles the popover in menu bar mode,
+    /// brings the window forward or hides the app in the other two.
+    public var hotkey: Hotkey? {
+        get { menuBar.hotkey }
+        set { menuBar.hotkey = newValue }
+    }
+
+    /// Whether the bundle should carry `LSUIElement`: only for a menu bar
+    /// app that hides its Dock icon and asked for it at launch too.
+    public var wantsBakedDockIcon: Bool {
+        mode == .menuBar && menuBar.hideDockIcon && menuBar.bakeDockIcon
+    }
+
     private enum CodingKeys: String, CodingKey {
         case showToolbar, badgeFromTitle, badgeFromAPI, notificationsEnabled
         case keepRunningWhenWindowCloses, allowedHosts, userAgent, zoom

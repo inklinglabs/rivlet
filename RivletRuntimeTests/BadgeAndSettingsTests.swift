@@ -50,10 +50,10 @@ import Testing
         let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
         let dir = FileManager.default.temporaryDirectory.appending(path: "rivlet-folder-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        #expect(DownloadManager.resolveFolder(nil) == downloads)
-        #expect(DownloadManager.resolveFolder("") == downloads)
-        #expect(DownloadManager.resolveFolder(dir.path).standardizedFileURL == dir.standardizedFileURL)
-        #expect(DownloadManager.resolveFolder(dir.appending(path: "gone").path) == downloads)
+        #expect(DownloadLocation.resolve(nil) == downloads)
+        #expect(DownloadLocation.resolve("") == downloads)
+        #expect(DownloadLocation.resolve(dir.path).standardizedFileURL == dir.standardizedFileURL)
+        #expect(DownloadLocation.resolve(dir.appending(path: "gone").path) == downloads)
         try? FileManager.default.removeItem(at: dir)
     }
 }

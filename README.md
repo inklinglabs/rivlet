@@ -42,9 +42,14 @@ data live where WebKit keeps them for any app, under `~/Library/WebKit/`.
   say each time. Camera and microphone prompts, find in page, zoom,
   print, full screen, and a toolbar you can hide.
 - Shows each app the way you want it: as a normal window, in the menu bar
-  as a popover with a global keyboard shortcut and no Dock icon, or as a
-  floating window that stays above your other windows and can follow you
-  across Spaces. Change the mode any time, even while the app runs.
+  as a popover with no Dock icon, or as a floating window that stays above
+  your other windows and can follow you across Spaces. Change the mode any
+  time, even while the app runs.
+- Gives each app one global keyboard shortcut. It opens and closes the
+  popover of a menu bar app, and brings a window app to the front or
+  hides it.
+- Moves an app between your own Applications folder and the Mac's, and
+  asks for an administrator password only when macOS requires one.
 
 ## What it does not do
 
@@ -74,6 +79,7 @@ xcodebuild -project Rivlet.xcodeproj -scheme Rivlet test
 The design and acceptance criteria are in
 [docs/specs/rivlet-v1.md](docs/specs/rivlet-v1.md) and, for the menu bar
 and floating modes, [docs/specs/rivlet-v2.md](docs/specs/rivlet-v2.md).
+What 1.2 added is in [docs/specs/rivlet-1-2.md](docs/specs/rivlet-1-2.md).
 Releases follow
 [docs/RELEASING.md](docs/RELEASING.md). Work happens on `dev`; `main` only
 moves at release time.

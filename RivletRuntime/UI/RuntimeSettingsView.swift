@@ -95,8 +95,7 @@ private struct GeneralSettingsPane: View {
     }
 
     private var downloadFolderLabel: String {
-        guard let folder = context.store.settings.downloadFolder else { return "Downloads" }
-        return (folder as NSString).abbreviatingWithTildeInPath
+        DownloadLocation.label(for: context.store.settings.downloadFolder)
     }
 
     private func chooseDownloadFolder() {
@@ -106,10 +105,9 @@ private struct GeneralSettingsPane: View {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Choose"
-        panel.directoryURL = DownloadManager.resolveFolder(context.store.settings.downloadFolder)
+        panel.directoryURL = DownloadLocation.resolve(context.store.settings.downloadFolder)
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        let systemDownloads = DownloadManager.systemDownloads.standardizedFileURL
-        context.store.settings.downloadFolder = url.standardizedFileURL == systemDownloads ? nil : url.path
+        context.store.settings.downloadFolder = DownloadLocation.storedValue(for: url)
     }
 
     private func saveUserAgent() {

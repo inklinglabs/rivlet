@@ -25,3 +25,6 @@ xcuserdata/
 
 # Icon source files stay local
 *.sketch
+
+# Python
+__pycache__/

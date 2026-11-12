@@ -11,8 +11,6 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
     private var statusItem: NSStatusItem?
     private let popover = NSPopover()
     private let content: PopoverContentController
-    private var hotkeyToken: HotkeyRegistrar.Token?
-    private var registeredHotkey: Hotkey?
     /// Set when the status item could not be made; the app shows as a
     /// window for this launch and the stored mode is left alone.
     private var fallback: WindowPresenter?
@@ -28,6 +26,9 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
         popover.contentViewController = content
         content.onDetach = { [weak self] in self?.detach() }
         content.onEscape = { [weak self] in self?.popover.performClose(nil) }
+        content.onResize = { [weak self] size in self?.resize(to: size) }
+        content.onResizeEnded = { [weak self] in self?.saveSize() }
+        content.isCentered = { [weak self] in self?.popoverIsCentered ?? true }
     }
 
     // MARK: ModePresenter
@@ -69,7 +70,6 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
             content.host(controller.releaseWebView())
         }
         NSApp.setActivationPolicy(settings.hideDockIcon ? .accessory : .regular)
-        applyHotkey(settings.hotkey)
     }
 
     /// A menu bar app launches into its status item and nothing else.
@@ -90,7 +90,6 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
 
     func deactivate() {
         if let fallback { fallback.deactivate(); self.fallback = nil }
-        applyHotkey(nil)
         popover.performClose(nil)
         if let statusItem { NSStatusBar.system.removeStatusItem(statusItem) }
         statusItem = nil
@@ -183,28 +182,33 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
         NSApp.activate()
     }
 
-    // MARK: Hotkey
+    // MARK: Resize
 
-    /// Tries the combination for real and lets it go again, so the
-    /// Settings pane can refuse one another app already owns.
-    func canRegister(_ hotkey: Hotkey) -> Bool {
-        if hotkey == registeredHotkey { return true }
-        guard let token = try? HotkeyRegistrar.shared.register(hotkey, handler: {}) else { return false }
-        HotkeyRegistrar.shared.unregister(token)
-        return true
+    /// Whether the popover sits centered under the status item. Against a
+    /// screen edge AppKit slides it sideways and it grows on one side only.
+    private var popoverIsCentered: Bool {
+        guard let button = statusItem?.button, let buttonWindow = button.window,
+              let popoverWindow = content.view.window else { return true }
+        let anchor = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil)).midX
+        return abs(popoverWindow.frame.midX - anchor) < 3
     }
 
-    private func applyHotkey(_ hotkey: Hotkey?) {
-        guard hotkey != registeredHotkey else { return }
-        if let hotkeyToken { HotkeyRegistrar.shared.unregister(hotkeyToken) }
-        hotkeyToken = nil
-        registeredHotkey = nil
-        guard let hotkey else { return }
-        do {
-            hotkeyToken = try HotkeyRegistrar.shared.register(hotkey) { [weak self] in self?.toggle() }
-            registeredHotkey = hotkey
-        } catch {
-            NSLog("Rivlet: could not register hotkey \(HotkeyFormatter.string(for: hotkey)): \(error)")
+    private func resize(to size: PopoverSize) {
+        let visible = (content.view.window?.screen ?? NSScreen.main)?.visibleFrame.size
+        let clamped = size.clamped(
+            maxWidth: visible.map { Double($0.width) } ?? .infinity,
+            maxHeight: visible.map { Double($0.height) - 28 } ?? .infinity
+        )
+        let next = NSSize(width: clamped.width, height: clamped.height)
+        content.preferredContentSize = next
+        popover.contentSize = next
+    }
+
+    private func saveSize() {
+        let size = popover.contentSize
+        let stored = PopoverSize(width: Double(size.width), height: Double(size.height)).clamped()
+        if context.store.settings.menuBar.popoverSize != stored {
+            context.store.settings.menuBar.popoverSize = stored
         }
     }
 
@@ -226,7 +230,13 @@ final class MenuBarPresenter: NSObject, ModePresenter, NSPopoverDelegate {
 final class PopoverContentController: NSViewController {
     var onDetach: (() -> Void)?
     var onEscape: (() -> Void)?
+    /// A corner is being dragged and wants this size.
+    var onResize: ((PopoverSize) -> Void)?
+    var onResizeEnded: (() -> Void)?
+    var isCentered: (() -> Bool)?
     private let container = NSView()
+    private let leftGrip = PopoverResizeGrip(corner: .bottomLeft)
+    private let rightGrip = PopoverResizeGrip(corner: .bottomRight)
     private let header = PopoverHeaderView()
     private let appTitle: String
 
@@ -248,7 +258,27 @@ final class PopoverContentController: NSViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(header)
         root.addSubview(container)
+        // Above the web view, so the corners take the mouse before the page.
+        for grip in [leftGrip, rightGrip] {
+            grip.translatesAutoresizingMaskIntoConstraints = false
+            grip.currentSize = { [weak self] in
+                let size = self?.view.frame.size ?? .zero
+                return PopoverSize(width: Double(size.width), height: Double(size.height))
+            }
+            grip.isCentered = { [weak self] in self?.isCentered?() ?? true }
+            grip.onResize = { [weak self] size in self?.onResize?(size) }
+            grip.onEnded = { [weak self] in self?.onResizeEnded?() }
+            root.addSubview(grip, positioned: .above, relativeTo: container)
+        }
         NSLayoutConstraint.activate([
+            leftGrip.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            leftGrip.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            leftGrip.widthAnchor.constraint(equalToConstant: PopoverResizeGrip.side),
+            leftGrip.heightAnchor.constraint(equalToConstant: PopoverResizeGrip.side),
+            rightGrip.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            rightGrip.bottomAnchor.constraint(equalTo: root.bottomAnchor),
+            rightGrip.widthAnchor.constraint(equalToConstant: PopoverResizeGrip.side),
+            rightGrip.heightAnchor.constraint(equalToConstant: PopoverResizeGrip.side),
             header.topAnchor.constraint(equalTo: root.topAnchor),
             header.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             header.trailingAnchor.constraint(equalTo: root.trailingAnchor),
@@ -266,6 +296,8 @@ final class PopoverContentController: NSViewController {
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)
+        // A web view is layer backed and would otherwise draw over the grips.
+        for grip in [leftGrip, rightGrip] { view.addSubview(grip, positioned: .above, relativeTo: container) }
         NSLayoutConstraint.activate([
             webView.topAnchor.constraint(equalTo: container.topAnchor),
             webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
@@ -333,4 +365,75 @@ final class PopoverHeaderView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) { dragStart = nil }
+}
+
+/// A drag handle in one bottom corner of the popover. NSPopover has no
+/// resize chrome of its own, so the corners carry it.
+@MainActor
+final class PopoverResizeGrip: NSView {
+    enum Corner { case bottomLeft, bottomRight }
+    static let side: CGFloat = 16
+
+    let corner: Corner
+    var currentSize: (() -> PopoverSize)?
+    var isCentered: (() -> Bool)?
+    var onResize: ((PopoverSize) -> Void)?
+    var onEnded: (() -> Void)?
+    /// Pointer position and popover size when the drag began, in screen
+    /// coordinates: the popover window moves while it resizes, so window
+    /// coordinates would chase themselves.
+    private var start: (point: NSPoint, size: PopoverSize, centered: Bool)?
+
+    init(corner: Corner) {
+        self.corner = corner
+        super.init(frame: .zero)
+        wantsLayer = true
+        toolTip = "Drag to resize"
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func resetCursorRects() {
+        let position: NSCursor.FrameResizePosition = corner == .bottomLeft ? .bottomLeft : .bottomRight
+        addCursorRect(bounds, cursor: .frameResize(position: position, directions: .all))
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        // Two short diagonal strokes, the classic grow box, kept faint.
+        NSColor.tertiaryLabelColor.setStroke()
+        let path = NSBezierPath()
+        path.lineWidth = 1
+        for inset in [5.0, 9.0] {
+            if corner == .bottomRight {
+                path.move(to: NSPoint(x: bounds.maxX - inset, y: 3))
+                path.line(to: NSPoint(x: bounds.maxX - 3, y: inset))
+            } else {
+                path.move(to: NSPoint(x: inset, y: 3))
+                path.line(to: NSPoint(x: 3, y: inset))
+            }
+        }
+        path.stroke()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let size = currentSize?() else { return }
+        start = (NSEvent.mouseLocation, size, isCentered?() ?? true)
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start else { return }
+        let now = NSEvent.mouseLocation
+        let outward = corner == .bottomRight ? now.x - start.point.x : start.point.x - now.x
+        let down = start.point.y - now.y
+        onResize?(start.size.dragged(dx: Double(outward), dy: Double(down), centered: start.centered))
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        guard start != nil else { return }
+        start = nil
+        onEnded?()
+    }
 }

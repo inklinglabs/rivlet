@@ -17,25 +17,8 @@ final class DownloadManager: NSObject, WKDownloadDelegate {
         download.delegate = self
     }
 
-    static var systemDownloads: URL {
-        FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-    }
-
-    /// The folder downloads go to: the chosen one if it still exists,
-    /// otherwise ~/Downloads.
-    nonisolated static func resolveFolder(_ chosen: String?) -> URL {
-        let downloads = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
-        guard let chosen, !chosen.isEmpty else { return downloads }
-        var isDirectory: ObjCBool = false
-        if FileManager.default.fileExists(atPath: chosen, isDirectory: &isDirectory), isDirectory.boolValue {
-            return URL(fileURLWithPath: chosen)
-        }
-        NSLog("Rivlet: download folder \(chosen) is missing, saving to Downloads instead")
-        return downloads
-    }
-
     func download(_ download: WKDownload, decideDestinationUsing response: URLResponse, suggestedFilename: String) async -> URL? {
-        let folder = Self.resolveFolder(store.settings.downloadFolder)
+        let folder = DownloadLocation.resolve(store.settings.downloadFolder)
         let destination: URL
         if store.settings.askWhereToSaveDownloads {
             guard let chosen = await askForDestination(in: folder, suggestedFilename: suggestedFilename) else { return nil }
@@ -67,7 +50,7 @@ final class DownloadManager: NSObject, WKDownloadDelegate {
 
     func downloadDidFinish(_ download: WKDownload) {
         guard let url = active.removeValue(forKey: download) else { return }
-        if url.deletingLastPathComponent().standardizedFileURL == Self.systemDownloads.standardizedFileURL {
+        if url.deletingLastPathComponent().standardizedFileURL == DownloadLocation.systemDownloads.standardizedFileURL {
             DistributedNotificationCenter.default().post(name: Notification.Name("com.apple.DownloadFileFinished"), object: url.path)
         }
         NSApp.requestUserAttention(.informationalRequest)

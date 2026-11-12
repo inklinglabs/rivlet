@@ -27,7 +27,7 @@ final class WindowPresenter: ModePresenter {
     }
 
     func showAtLaunch() { show() }
-    func toggle() { show() }
+    func toggle() { WindowPresentation.toggle(self, window: context.windows.main?.window) }
 
     func deactivate() {
         context.windows.main?.window?.setFrameAutosaveName("")

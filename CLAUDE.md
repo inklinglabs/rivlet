@@ -55,6 +55,19 @@ it for colors, typography, window layout, and settings. Bundle ID:
   mode lives in `settings.json`, never in the bundle; the maker tells a
   running app about changes with the `settingsChanged` distributed
   notification. Design in [docs/specs/rivlet-v2.md](docs/specs/rivlet-v2.md).
+- One exception to "never in the bundle": `BundleBaker`
+  (`RivletRuntime/Core/`) writes or removes `LSUIElement` and re-signs, so
+  a hidden-Dock menu bar app can skip the Dock at launch. It is derived
+  from `settings.json` (`AppSettings.wantsBakedDockIcon`) and reconciled
+  by the running app, or by the maker when the app is not running. Add no
+  other bundle edits. Design in
+  [docs/specs/rivlet-1-2.md](docs/specs/rivlet-1-2.md).
+- The app's one global shortcut is stored at `menuBar.hotkey` for 1.1
+  compatibility but works in every mode; use `AppSettings.hotkey`.
+  `ModeCoordinator` registers it and calls the presenter's `toggle()`.
+- Generated apps can live in `~/Applications` or `/Applications`
+  (`AppMover`, admin prompt only as a fallback). Bundles stay owned by the
+  user.
 - Updates: Sparkle 2 via SPM in the maker only, feed on GitHub Releases,
   following Palilogy's `Updates/` pattern.
 - Free and MIT. No licensing code.

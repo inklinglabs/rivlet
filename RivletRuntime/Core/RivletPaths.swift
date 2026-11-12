@@ -34,6 +34,12 @@ public enum RivletPaths {
             .appending(path: "Applications", directoryHint: .isDirectory)
     }
 
+    /// `/Applications`, where a generated app can be moved for every user
+    /// of the Mac.
+    public static var systemApplications: URL {
+        URL(filePath: "/Applications", directoryHint: .isDirectory)
+    }
+
     public static func ensureDirectory(_ url: URL) throws {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }

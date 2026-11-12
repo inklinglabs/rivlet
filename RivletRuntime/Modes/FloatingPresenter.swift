@@ -38,7 +38,7 @@ final class FloatingPresenter: ModePresenter {
     }
 
     func showAtLaunch() { show() }
-    func toggle() { show() }
+    func toggle() { WindowPresentation.toggle(self, window: context.windows.main?.window) }
 
     func deactivate() {
         guard let window = context.windows.main?.window else { return }

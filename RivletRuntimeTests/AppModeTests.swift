@@ -110,4 +110,70 @@ private struct LegacyAppSettings: Codable, Equatable {
         #expect(try Data(contentsOf: file) != original)
         try? FileManager.default.removeItem(at: dir)
     }
+
+    // MARK: 1.2
+
+    /// The 1.1 menu bar options, frozen, to prove a 1.2 file still decodes
+    /// on a 1.1 runtime.
+    private struct MenuBarOptions11: Codable {
+        var hideDockIcon: Bool
+        var hotkey: Hotkey?
+        var popoverSize: PopoverSize
+    }
+
+    private struct Settings11: Codable {
+        var mode: String
+        var menuBar: MenuBarOptions11
+    }
+
+    @Test func bakeOptionDefaultsOffAndRoundTrips() throws {
+        let old = try JSONDecoder().decode(AppSettings.self, from: Data(#"{"mode":"menuBar","menuBar":{"hideDockIcon":true}}"#.utf8))
+        #expect(old.menuBar.bakeDockIcon == false)
+        #expect(old.wantsBakedDockIcon == false)
+
+        var settings = AppSettings()
+        settings.mode = .menuBar
+        settings.menuBar.bakeDockIcon = true
+        let data = try JSONEncoder().encode(settings)
+        #expect(try JSONDecoder().decode(AppSettings.self, from: data) == settings)
+
+        let onOldRuntime = try JSONDecoder().decode(Settings11.self, from: data)
+        #expect(onOldRuntime.mode == "menuBar")
+        #expect(onOldRuntime.menuBar.hideDockIcon == true)
+    }
+
+    @Test func bakeOnlyAppliesToAHiddenMenuBarApp() {
+        var settings = AppSettings()
+        settings.menuBar.bakeDockIcon = true
+        settings.mode = .window
+        #expect(!settings.wantsBakedDockIcon)
+        settings.mode = .floating
+        #expect(!settings.wantsBakedDockIcon)
+        settings.mode = .menuBar
+        #expect(settings.wantsBakedDockIcon)
+        settings.menuBar.hideDockIcon = false
+        #expect(!settings.wantsBakedDockIcon)
+    }
+
+    @Test func oneShortcutForEveryMode() throws {
+        // A 1.1 file keeps its shortcut, and it no longer depends on the mode.
+        let data = Data(#"{"mode":"floating","menuBar":{"hotkey":{"keyCode":9,"modifiers":2048}}}"#.utf8)
+        var settings = try JSONDecoder().decode(AppSettings.self, from: data)
+        #expect(settings.hotkey == Hotkey(keyCode: 9, modifiers: Hotkey.Modifier.option))
+        settings.hotkey = Hotkey(keyCode: 49, modifiers: Hotkey.Modifier.control)
+        #expect(settings.menuBar.hotkey == settings.hotkey)
+        settings.hotkey = nil
+        #expect(settings.menuBar.hotkey == nil)
+    }
+
+    @Test func popoverDragMath() {
+        let start = PopoverSize(width: 420, height: 640)
+        // Centered: the corner keeps up with the pointer at twice the travel.
+        #expect(start.dragged(dx: 40, dy: 30, centered: true) == PopoverSize(width: 500, height: 670))
+        #expect(start.dragged(dx: 40, dy: 30, centered: false) == PopoverSize(width: 460, height: 670))
+        // Never below the minimum, never past the screen.
+        #expect(start.dragged(dx: -400, dy: -900, centered: true) == PopoverSize.minimum)
+        #expect(start.dragged(dx: 900, dy: 900, centered: true, maxWidth: 1000, maxHeight: 800) == PopoverSize(width: 1000, height: 800))
+        #expect(PopoverSize(width: 300.4, height: 250.6).clamped() == PopoverSize(width: 300, height: 251))
+    }
 }

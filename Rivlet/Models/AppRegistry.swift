@@ -37,6 +37,13 @@ final class AppRegistry {
         save()
     }
 
+    /// Points an entry at its bundle's new home after a move.
+    func relocate(_ app: GeneratedApp, to bundleURL: URL) {
+        guard let index = apps.firstIndex(where: { $0.id == app.id }) else { return }
+        apps[index].bundlePath = bundleURL.path
+        save()
+    }
+
     func remove(_ app: GeneratedApp) {
         apps.removeAll { $0.id == app.id }
         save()
@@ -56,16 +63,25 @@ final class AppRegistry {
 
     /// Picks up apps made by Rivlet that the registry does not know about,
     /// for example after a restore from backup.
-    nonisolated static func scanForForeignApps(knownPaths: Set<String>, in directories: [URL] = [RivletPaths.userApplications]) -> [GeneratedApp] {
+    nonisolated static func scanForForeignApps(knownPaths: Set<String>, in directories: [URL] = [RivletPaths.userApplications, RivletPaths.systemApplications]) -> [GeneratedApp] {
         var found: [GeneratedApp] = []
         for directory in directories {
             let contents = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey], options: [.skipsHiddenFiles])) ?? []
             for url in contents where url.pathExtension == "app" && !knownPaths.contains(url.path) {
-                guard let bundle = Bundle(url: url), let identity = AppIdentity(bundle: bundle) else { continue }
+                // /Applications holds every app on the Mac; one cheap read of
+                // Info.plist rules out the ones Rivlet did not make.
+                guard isRivletApp(url), let bundle = Bundle(url: url), let identity = AppIdentity(bundle: bundle) else { continue }
                 let created = (try? url.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date()
                 found.append(GeneratedApp(id: UUID(), name: identity.name, url: identity.url, bundleIdentifier: identity.bundleIdentifier, bundlePath: url.path, createdAt: created))
             }
         }
         return found
+    }
+
+    nonisolated private static func isRivletApp(_ bundle: URL) -> Bool {
+        guard let data = try? Data(contentsOf: bundle.appending(path: "Contents/Info.plist")),
+              let info = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any]
+        else { return false }
+        return info[AppIdentity.InfoKey.rivletApp] as? Bool == true
     }
 }

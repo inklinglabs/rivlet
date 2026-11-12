@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 (unreleased)
+
+- New: the keyboard shortcut works in every mode. In Window and Floating
+  mode it brings the app to the front from anywhere, and hides it when it
+  is already in front. A shortcut you set for a menu bar app carries over.
+- New: drag a bottom corner of a menu bar app's popover to resize it. The
+  size sticks.
+- New: a menu bar app can skip the Dock while it launches, not only after.
+  Turn on "Skip the Dock at launch too" in the app's Settings under Mode.
+  This is the one setting that changes the app itself, so Rivlet signs
+  the app again on your Mac when you switch it.
+- New: move an app to the Mac's Applications folder, or back to your own,
+  from Rivlet. You are asked for an administrator password only if your
+  account needs one. Apps in /Applications now show up in Rivlet's list.
+- New: choose an app's download folder from Rivlet, without opening the
+  app's own Settings.
+
 ## 1.1.0 (2026-10-21)
 
 - New: every app has a mode. Window is what you had. Menu bar puts the

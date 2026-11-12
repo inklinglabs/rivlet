@@ -43,17 +43,53 @@ final class AppState {
     }
 
     /// Writes the mode to the app's settings file and tells the app, if it
-    /// is running, to pick it up. The bundle is never touched.
+    /// is running, to pick it up. The one thing in the bundle that follows
+    /// the mode, `LSUIElement`, is brought in line here too, so an app that
+    /// is not running is right before its next launch.
     func setMode(_ mode: AppMode, for app: GeneratedApp) {
+        updateSettings(for: app) { $0.mode = mode }
+    }
+
+    func settings(of app: GeneratedApp) -> AppSettings {
+        SettingsStore(bundleIdentifier: app.bundleIdentifier).settings
+    }
+
+    /// Changes an app's `settings.json` and notifies a running copy.
+    func updateSettings(for app: GeneratedApp, _ change: (inout AppSettings) -> Void) {
         let store = SettingsStore(bundleIdentifier: app.bundleIdentifier)
-        guard store.settings.mode != mode else { return }
-        store.settings.mode = mode
+        var next = store.settings
+        change(&next)
+        guard next != store.settings else { return }
+        store.settings = next
+        let running = !NSRunningApplication.runningApplications(withBundleIdentifier: app.bundleIdentifier).isEmpty
+        if !running {
+            // A running app reconciles its own bundle when it hears the
+            // notification; two writers at once would race on the signature.
+            do {
+                try BundleBaker.reconcile(app.bundleURL, wanted: next.wantsBakedDockIcon)
+            } catch {
+                NSLog("Rivlet: could not update \(app.name): \(error.localizedDescription)")
+            }
+        }
         DistributedNotificationCenter.default().postNotificationName(
             RivletPaths.settingsChangedNotification,
             object: app.bundleIdentifier,
             userInfo: nil,
             deliverImmediately: true
         )
+    }
+
+    /// Moves the app's bundle to another folder, asking for an admin
+    /// password only if macOS will not let this user do it.
+    func move(_ app: GeneratedApp, to directory: URL) async {
+        do {
+            let moved = try await AppMover.move(app.bundleURL, bundleIdentifier: app.bundleIdentifier, to: directory)
+            registry.relocate(app, to: moved)
+        } catch AppMoverError.cancelled {
+            // The user closed the password dialog. Nothing moved.
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func reveal(_ app: GeneratedApp) {
