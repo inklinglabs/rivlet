@@ -28,3 +28,6 @@ xcuserdata/
 
 # Python
 __pycache__/
+
+# Local screenshots
+rivlet-screenshots/
