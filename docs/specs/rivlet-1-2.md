@@ -247,7 +247,7 @@ hand on a real Mac; T007 is that pass.
 - [x] T007 Hands-on pass on a release build: Dock at launch, popover drag, shortcut in each mode, password dialog as a standard user
 - [x] T008 README, changelog, CLAUDE.md architecture lines
 - [x] T009 Release prep held for Matt: version bump to 1.2.0, changelog date, dev-to-main PR
-- [ ] T010 Website: modes copy on the Rivlet page and in the copy context, from the options Matt picks
+- [x] T010 Website: modes copy on the Rivlet page and in the copy context, from the options Matt picks
 
 ---
 
