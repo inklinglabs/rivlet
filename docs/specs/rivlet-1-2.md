@@ -244,9 +244,9 @@ hand on a real Mac; T007 is that pass.
 - [x] T004 [P] Popover drag-resize from the bottom corners, clamped and saved
 - [x] T005 [P] Maker: Move to Applications and back with admin fallback, registry scans /Applications
 - [x] T006 [P] Maker: Downloads row in app detail, shared DownloadLocation helper
-- [ ] T007 Hands-on pass on a release build: Dock at launch, popover drag, shortcut in each mode, password dialog as a standard user
+- [x] T007 Hands-on pass on a release build: Dock at launch, popover drag, shortcut in each mode, password dialog as a standard user
 - [x] T008 README, changelog, CLAUDE.md architecture lines
-- [ ] T009 Release prep held for Matt: version bump to 1.2.0, changelog date, dev-to-main PR
+- [x] T009 Release prep held for Matt: version bump to 1.2.0, changelog date, dev-to-main PR
 - [ ] T010 Website: modes copy on the Rivlet page and in the copy context, from the options Matt picks
 
 ---

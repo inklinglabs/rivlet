@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.0 (unreleased)
+## 1.2.0 (2026-11-25)
 
 - New: the keyboard shortcut works in every mode. In Window and Floating
   mode it brings the app to the front from anywhere, and hides it when it
