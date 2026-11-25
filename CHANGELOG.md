@@ -16,6 +16,12 @@
   account needs one. Apps in /Applications now show up in Rivlet's list.
 - New: choose an app's download folder from Rivlet, without opening the
   app's own Settings.
+- Fixed: an app's Settings window was taller than a 13 inch screen.
+  General is now three tabs: General, Alerts for the Dock badge and
+  notifications, and Advanced for the custom user agent.
+- Fixed: in New App, changing the web address after the first lookup
+  updated the icon but left the old name. The name now follows the
+  address until you type your own.
 
 ## 1.1.0 (2026-10-21)
 

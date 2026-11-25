@@ -8,7 +8,9 @@ struct NewAppSheet: View {
 
     @State private var urlText = ""
     @State private var name = ""
-    @State private var nameEdited = false
+    /// The name the last site lookup filled in. The user has taken over the
+    /// name once the field no longer matches it.
+    @State private var suggestedName = ""
     @State private var siteIcon: NSImage?
     @State private var customIcon: NSImage?
     @State private var roundCorners = true
@@ -66,7 +68,6 @@ struct NewAppSheet: View {
                         TextField("Name", text: $name, prompt: Text("Filled in from the site\u{2019}s title"))
                             .labelsHidden()
                             .textFieldStyle(.roundedBorder)
-                            .onChange(of: name) { _, _ in nameEdited = true }
                     }
                 }
                 Section("Icon") {
@@ -152,9 +153,10 @@ struct NewAppSheet: View {
         let result = await SiteInspector.inspect(url)
         guard !Task.isCancelled else { return }
         if let png = result.iconPNG { siteIcon = NSImage(data: png) }
-        if !nameEdited || name.isEmpty {
-            name = result.suggestedName ?? Self.nameFromHost(url)
-            nameEdited = false
+        if Self.shouldReplaceName(current: name, lastSuggested: suggestedName) {
+            let suggestion = result.suggestedName ?? Self.nameFromHost(url)
+            suggestedName = suggestion
+            name = suggestion
         }
     }
 
@@ -164,6 +166,13 @@ struct NewAppSheet: View {
         case .menuBar: return "An icon in the menu bar with the page in a popover, one click or shortcut away."
         case .floating: return "A window that stays above other windows while you work."
         }
+    }
+
+    /// A lookup may overwrite the name only while it is empty or still the
+    /// one a previous lookup filled in. Anything the user typed stays.
+    static func shouldReplaceName(current: String, lastSuggested: String) -> Bool {
+        let trimmed = current.trimmingCharacters(in: .whitespaces)
+        return trimmed.isEmpty || current == lastSuggested
     }
 
     static func nameFromHost(_ url: URL) -> String {

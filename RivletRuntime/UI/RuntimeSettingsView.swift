@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Settings for one generated app: General, Mode, Links, Scripts.
+/// Settings for one generated app: General, Alerts, Mode, Links, Scripts,
+/// Advanced. One topic per tab, so no tab needs to scroll.
 struct RuntimeSettingsView: View {
     let context: RuntimeContext
 
@@ -8,13 +9,18 @@ struct RuntimeSettingsView: View {
         TabView {
             GeneralSettingsPane(context: context)
                 .tabItem { Label("General", systemImage: "gearshape") }
+            AlertsSettingsPane(context: context)
+                .tabItem { Label("Alerts", systemImage: "bell.badge") }
             ModeSettingsPane(context: context)
                 .tabItem { Label("Mode", systemImage: "macwindow") }
             LinksSettingsPane(context: context)
                 .tabItem { Label("Links", systemImage: "link") }
             ScriptsSettingsPane(context: context)
                 .tabItem { Label("Scripts", systemImage: "curlybraces") }
+            AdvancedSettingsPane(context: context)
+                .tabItem { Label("Advanced", systemImage: "gearshape.2") }
         }
+        // Each tab is exactly as tall as its content.
         .frame(width: 560)
         .fixedSize(horizontal: false, vertical: true)
     }
@@ -22,7 +28,6 @@ struct RuntimeSettingsView: View {
 
 private struct GeneralSettingsPane: View {
     let context: RuntimeContext
-    @State private var userAgent = ""
 
     var body: some View {
         @Bindable var store = context.store
@@ -34,24 +39,6 @@ private struct GeneralSettingsPane: View {
                     }
                 Toggle("Keep running when the window closes", isOn: $store.settings.keepRunningWhenWindowCloses)
                 Text("Badges and notifications keep arriving while the app runs in the Dock. Quit from the Dock or with Command-Q.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Dock badge") {
-                Toggle("From the page title", isOn: $store.settings.badgeFromTitle)
-                    .onChange(of: store.settings.badgeFromTitle) { _, value in
-                        context.badge.setTitleBadging(enabled: value)
-                    }
-                Text("Reads counts like \u{201C}(3) Inbox\u{201D} out of the window title.")
-                    .font(.caption).foregroundStyle(.secondary)
-                Toggle("From the site itself", isOn: $store.settings.badgeFromAPI)
-                    .onChange(of: store.settings.badgeFromAPI) { _, _ in context.reloadUserContent() }
-                Text("Sites that use the Badging API set the number directly. Changing this reloads the page.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Notifications") {
-                Toggle("Show the site\u{2019}s notifications in Notification Center", isOn: $store.settings.notificationsEnabled)
-                    .onChange(of: store.settings.notificationsEnabled) { _, _ in context.reloadUserContent() }
-                Text("The site still has to ask for permission. Focus modes hide banners the same way they do for any app.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Downloads") {
@@ -73,25 +60,8 @@ private struct GeneralSettingsPane: View {
                 Text("Applies to the next download.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Browser identity") {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Custom user agent")
-                    TextField("Custom user agent", text: $userAgent, prompt: Text("Safari on this Mac"))
-                        .labelsHidden()
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit(saveUserAgent)
-                }
-                Text("Leave empty to look like Safari, which is what sign-in pages expect. Changing this reloads the page.")
-                    .font(.caption).foregroundStyle(.secondary)
-                HStack {
-                    Spacer()
-                    Button("Apply", action: saveUserAgent)
-                        .disabled(userAgent == (store.settings.userAgent ?? ""))
-                }
-            }
         }
         .formStyle(.grouped)
-        .onAppear { userAgent = context.store.settings.userAgent ?? "" }
     }
 
     private var downloadFolderLabel: String {
@@ -109,11 +79,34 @@ private struct GeneralSettingsPane: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         context.store.settings.downloadFolder = DownloadLocation.storedValue(for: url)
     }
+}
 
-    private func saveUserAgent() {
-        let trimmed = userAgent.trimmingCharacters(in: .whitespacesAndNewlines)
-        context.store.settings.userAgent = trimmed.isEmpty ? nil : trimmed
-        context.reloadUserContent()
+private struct AlertsSettingsPane: View {
+    let context: RuntimeContext
+
+    var body: some View {
+        @Bindable var store = context.store
+        Form {
+            Section("Dock badge") {
+                Toggle("From the page title", isOn: $store.settings.badgeFromTitle)
+                    .onChange(of: store.settings.badgeFromTitle) { _, value in
+                        context.badge.setTitleBadging(enabled: value)
+                    }
+                Text("Reads counts like \u{201C}(3) Inbox\u{201D} out of the window title.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Toggle("From the site itself", isOn: $store.settings.badgeFromAPI)
+                    .onChange(of: store.settings.badgeFromAPI) { _, _ in context.reloadUserContent() }
+                Text("Sites that use the Badging API set the number directly. Changing this reloads the page.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Notifications") {
+                Toggle("Show the site\u{2019}s notifications in Notification Center", isOn: $store.settings.notificationsEnabled)
+                    .onChange(of: store.settings.notificationsEnabled) { _, _ in context.reloadUserContent() }
+                Text("The site still has to ask for permission. Focus modes hide banners the same way they do for any app.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
     }
 }
 
@@ -250,6 +243,41 @@ private struct ScriptsSettingsPane: View {
         guard let selected else { return }
         try? source.write(to: selected, atomically: true, encoding: .utf8)
         dirty = false
+        context.reloadUserContent()
+    }
+}
+
+private struct AdvancedSettingsPane: View {
+    let context: RuntimeContext
+    @State private var userAgent = ""
+
+    var body: some View {
+        @Bindable var store = context.store
+        Form {
+            Section("Browser identity") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Custom user agent")
+                    TextField("Custom user agent", text: $userAgent, prompt: Text("Safari on this Mac"))
+                        .labelsHidden()
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit(saveUserAgent)
+                }
+                Text("Leave empty to look like Safari, which is what sign-in pages expect. Changing this reloads the page.")
+                    .font(.caption).foregroundStyle(.secondary)
+                HStack {
+                    Spacer()
+                    Button("Apply", action: saveUserAgent)
+                        .disabled(userAgent == (store.settings.userAgent ?? ""))
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { userAgent = context.store.settings.userAgent ?? "" }
+    }
+
+    private func saveUserAgent() {
+        let trimmed = userAgent.trimmingCharacters(in: .whitespacesAndNewlines)
+        context.store.settings.userAgent = trimmed.isEmpty ? nil : trimmed
         context.reloadUserContent()
     }
 }
